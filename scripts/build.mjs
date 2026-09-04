@@ -1,24 +1,24 @@
 import { rm, mkdir, readFile, writeFile, copyFile, cp } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 
-const cssTags = [
-  '<link rel="stylesheet" href="/patches/ui-v26.css" data-proxyharvest-ui="v26">',
-  '<link rel="stylesheet" href="/patches/auto-pipeline-v27.css" data-proxyharvest-pipeline="v27">'
-];
-const jsTags = [
-  '<script defer src="/patches/ui-v26.js" data-proxyharvest-ui="v26"></script>',
-  '<script defer src="/patches/auto-pipeline-v27.js" data-proxyharvest-pipeline="v27"></script>'
-];
+const assets = {
+  css: [
+    { path: '/patches/ui-v26.css', tag: '<link rel="stylesheet" href="/patches/ui-v26.css" data-proxyharvest-ui="v26">' },
+    { path: '/patches/auto-pipeline-v27.css', tag: '<link rel="stylesheet" href="/patches/auto-pipeline-v27.css" data-proxyharvest-pipeline="v27">' }
+  ],
+  js: [
+    { path: '/patches/ui-v26.js', tag: '<script defer src="/patches/ui-v26.js" data-proxyharvest-ui="v26"></script>' },
+    { path: '/patches/auto-pipeline-v27.js', tag: '<script defer src="/patches/auto-pipeline-v27.js" data-proxyharvest-pipeline="v27"></script>' }
+  ]
+};
 
 function inject(html) {
   let out = html;
-  for (const tag of cssTags) {
-    const marker = tag.match(/data-[^=]+="[^"]+"/)?.[0];
-    if (marker && !out.includes(marker)) out = out.includes('</head>') ? out.replace('</head>', `${tag}\n</head>`) : `${tag}\n${out}`;
+  for (const asset of assets.css) {
+    if (!out.includes(asset.path)) out = out.includes('</head>') ? out.replace('</head>', `${asset.tag}\n</head>`) : `${asset.tag}\n${out}`;
   }
-  for (const tag of jsTags) {
-    const marker = tag.match(/data-[^=]+="[^"]+"/)?.[0];
-    if (marker && !out.includes(marker)) out = out.includes('</body>') ? out.replace('</body>', `${tag}\n</body>`) : `${out}\n${tag}`;
+  for (const asset of assets.js) {
+    if (!out.includes(asset.path)) out = out.includes('</body>') ? out.replace('</body>', `${asset.tag}\n</body>`) : `${out}\n${asset.tag}`;
   }
   return out;
 }
