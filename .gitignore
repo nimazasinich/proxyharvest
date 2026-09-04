@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+*.log
+.env
+.env.*
+.venv/
+venv/
+node_modules/
+.DS_Store
+*.zip
+*.tgz
