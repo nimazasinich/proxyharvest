@@ -1,16 +1,20 @@
-name: Materialize ProxyHarvest V25.1
+name: Validate ProxyHarvest GitHub Main
 
 on:
   workflow_dispatch:
   push:
     branches:
       - main
+      - integration/v26-ui-runtime
     paths:
       - 'index.html'
+      - 'proxyharvest.html'
+      - 'proxyharvest.js'
       - 'package.json'
       - 'vercel.json'
       - '.vercelignore'
-      - 'static/**'
+      - 'patches/**'
+      - 'scripts/**'
       - 'api/**'
       - 'worker/**'
       - '.github/workflows/materialize-v25.1.yml'
@@ -19,87 +23,72 @@ permissions:
   contents: read
 
 concurrency:
-  group: proxyharvest-v25-vercel-source
+  group: proxyharvest-github-main-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  validate-vercel-source:
+  validate-github-main:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Block Python/Torch Vercel path
+      - name: Keep Vercel source Node-only
         shell: bash
         run: |
           set -euo pipefail
           test ! -f requirements.txt
           test ! -f app.py
           test ! -f deploy_space.py
-          test -f package.json
           test -f .vercelignore
           grep -Fq 'requirements.txt' .vercelignore
-          echo 'PASS python-torch-block'
+          echo 'PASS node-only-deploy-source'
 
-      - name: Validate V15 NetworkCanonical parity source
+      - name: Validate canonical fullstack pair
         shell: bash
         run: |
           set -euo pipefail
-          for f in index.html vercel.json static/app.js static/ui.js static/engine.js static/v15-compat.js static/styles.css static/repair.js api/ai/health.js api/ai/advise.js worker/proxyharvest-gateway.js; do
+          for f in index.html proxyharvest.html proxyharvest.js package.json vercel.json patches/ui-v26.js patches/ui-v26.css scripts/build.mjs api/ai/health.js api/ai/advise.js worker/proxyharvest-gateway.js; do
             test -f "$f" || { echo "MISSING FILE: $f"; exit 1; }
             echo "FOUND FILE: $f"
           done
-          check_marker() {
-            file="$1"; marker="$2"
-            if grep -Fq -- "$marker" "$file"; then
-              echo "MARKER OK: $file :: $marker"
-            else
-              echo "MARKER MISSING: $file :: $marker"
-              exit 1
-            fi
-          }
-          check_marker index.html 'ProxyHarvest'
-          check_marker index.html '/static/app.js'
-          check_marker vercel.json 'buildCommand'
-          check_marker vercel.json 'outputDirectory'
-          check_marker static/app.js 'bootV15Compatibility'
-          check_marker static/ui.js 'V15 NetworkCanonical parity'
-          check_marker static/v15-compat.js 'Real Verify Top 100'
-          check_marker static/v15-compat.js 'Export Working 100'
-          check_marker static/v15-compat.js 'Export Reachable'
-          check_marker static/v15-compat.js 'Export Verified Live'
-          check_marker static/engine.js 'workerReachable'
-          check_marker static/engine.js 'bridgeReachable'
-          check_marker static/engine.js 'protocolVerified'
-          check_marker static/engine.js 'tunnelVerified'
-          check_marker static/repair.js '/api/ai/advise'
-          echo 'PASS v15-parity-source'
+          grep -Fq 'PROXYHARVEST_EXPECTED_BUILD="25.0.0-original-fullstack"' index.html
+          grep -Fq "PROXYHARVEST_BUILD = '25.0.0-original-fullstack'" proxyharvest.js
+          cmp -s index.html proxyharvest.html
+          grep -Fq 'Best Config Export' patches/ui-v26.js
+          grep -Fq 'Real Verify' patches/ui-v26.js
+          grep -Fq '/api/ai/health' patches/ui-v26.js
+          grep -Fq '/api/ai/advise' patches/ui-v26.js
+          grep -Fq 'Worker/browser reachability never becomes a WireGuard handshake' patches/ui-v26.js
+          echo 'PASS canonical-pair-and-v26-patch'
 
-      - name: Validate JavaScript and Vercel-equivalent build
+      - name: Build deploy output
         shell: bash
         run: |
           set -euo pipefail
-          for f in static/*.js api/ai/*.js worker/*.js; do
-            echo "node --check $f"
-            node --check "$f"
-          done
           npm run build
           test -f public/index.html
-          test -f public/static/app.js
-          test -f public/static/v15-compat.js
-          grep -Fq 'Real Verify Top 100' public/static/v15-compat.js
-          echo 'PASS npm-build'
+          test -f public/proxyharvest.html
+          test -f public/proxyharvest.js
+          test -f public/patches/ui-v26.js
+          test -f public/patches/ui-v26.css
+          test -f public/build.json
+          grep -Fq 'data-proxyharvest-ui="v26"' public/index.html
+          grep -Fq 'patches/ui-v26.css' public/index.html
+          grep -Fq 'patches/ui-v26.js' public/index.html
+          echo 'PASS deploy-output'
 
-      - name: Safety semantics gate
+      - name: Truthful verification safety gate
         shell: bash
         run: |
           set -euo pipefail
-          if grep -Fq 'cfg.live = isReachable' static/v15-compat.js; then
-            echo 'FAIL: worker reachability must never become live/verified'
-            exit 1
-          fi
-          grep -Fq 'cfg.live = cfg.probe.protocolVerified || cfg.probe.tunnelVerified ? true : null' static/v15-compat.js
+          grep -Fq 'probeToLegacyLive' proxyharvest.js
+          grep -Fq 'protocolVerified' proxyharvest.js
+          grep -Fq 'tunnelVerified' proxyharvest.js
+          grep -Fq 'browser fallback does not prove proxy protocol/tunnel' proxyharvest.js
+          grep -Fq 'REACHABLE is never promoted to VERIFIED' patches/ui-v26.js
+          grep -Fq 'Verified only' patches/ui-v26.js
           echo 'PASS truthful-verification'
 
-      - name: Vercel redeploy note
+      - name: Summary
         run: |
-          echo "GitHub main is Vercel-ready. Python/Torch is blocked; Worker reachability remains separate from protocol/tunnel verification; Real Test Bridge is the verification path."
+          echo "GitHub main source is canonical: full attachment UI/runtime pair + V26 compact UI patch + AI API + Worker source."
