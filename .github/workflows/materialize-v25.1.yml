@@ -7,7 +7,9 @@ on:
       - main
     paths:
       - 'index.html'
+      - 'package.json'
       - 'vercel.json'
+      - '.vercelignore'
       - 'static/**'
       - 'api/**'
       - 'worker/**'
@@ -26,6 +28,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Block Python/Torch Vercel path
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -f requirements.txt
+          test ! -f app.py
+          test ! -f deploy_space.py
+          test -f package.json
+          test -f .vercelignore
+          grep -q 'requirements.txt' .vercelignore
+
       - name: Validate Vercel entrypoints
         shell: bash
         run: |
@@ -41,20 +54,21 @@ jobs:
           test -f worker/proxyharvest-gateway.js
           grep -q 'ProxyHarvest' index.html
           grep -q '/static/app.js' index.html
-          grep -q 'rewrites' vercel.json
+          grep -q 'buildCommand' vercel.json
+          grep -q 'outputDirectory' vercel.json
           grep -q 'bootV15Compatibility' static/app.js
           grep -q 'Export Working 100' static/v15-compat.js
           grep -q '/api/ai/advise' static/repair.js
 
-      - name: Validate JavaScript modules and serverless functions
+      - name: Run Vercel-equivalent build
         shell: bash
         run: |
           set -euo pipefail
-          for f in static/*.js api/ai/*.js worker/*.js; do
-            echo "checking $f"
-            node --check "$f"
-          done
+          npm run build
+          test -f public/index.html
+          test -f public/static/app.js
+          test -f public/static/v15-compat.js
 
       - name: Vercel redeploy note
         run: |
-          echo "GitHub source is Vercel-ready. Redeploy from Vercel/Git integration; this workflow validates UI, export, ping/probe, AI API, and Worker source without mutating files or fetching from Vercel preview URLs."
+          echo "GitHub main is Vercel-ready. Python/Torch files are blocked; npm run build validates UI, export, ping/probe, AI API, and Worker source."
