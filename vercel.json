@@ -2,6 +2,7 @@
   "version": 2,
   "cleanUrls": true,
   "trailingSlash": false,
+  "installCommand": "npm install --ignore-scripts --no-audit --no-fund",
   "buildCommand": "npm run build",
   "outputDirectory": "public",
   "rewrites": [
