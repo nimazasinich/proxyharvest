@@ -2,11 +2,14 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 DEPLOY="$ROOT/deploy/v25.1-xz"
+CHUNKS="$DEPLOY/chunks"
 ARCHIVE="$DEPLOY/runtime.tar.xz"
 EXPECTED="51761f2b6897f80bcce5401645285ad8d4a2b0e631642c78c31404d21ba273dc"
 
-test -f "$ARCHIVE"
+for i in $(seq -w 0 11); do test -f "$CHUNKS/part-$i.b64"; done
+cat "$CHUNKS"/part-*.b64 | base64 -d > "$ARCHIVE"
 echo "$EXPECTED  $ARCHIVE" | sha256sum -c -
+
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 tar -xJf "$ARCHIVE" -C "$WORK"
