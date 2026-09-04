@@ -1,15 +1,15 @@
 import { state, stats, subscribe } from './core.js';
 
 export const pages = [
-  ['dashboard','Dashboard','Overview and processing health','home'],
-  ['configs','Configs','Inspect, filter, test and export harvested configs','list'],
-  ['splitnet','SplitNet','Free WARP and transport candidates in a readable table','network'],
+  ['dashboard','Dashboard','Real-time overview of the proxy harvesting pipeline','home'],
+  ['configs','Configs','Inspect, test, filter, sort and export harvested configs','list'],
+  ['splitnet','SplitNet','Free WARP and transport candidates with bulk actions','network'],
   ['ircf','IRCF','WARP+ keys and clean Cloudflare endpoints','grid'],
-  ['sources','Sources','Provider catalog, source health and selective harvest','database'],
-  ['wireguard','WireGuard','WireGuard feeds with provenance and truthful verification','shield'],
-  ['repair','Repair Lab','Deterministic repair plus Hugging Face model advisor','spark'],
-  ['settings','Settings','Runtime, storage and processing preferences','settings'],
-  ['infrastructure','Infrastructure','Cloudflare Gateway, model backend and local verification','server'],
+  ['sources','Sources','Subscription catalog, source health and selective harvest','database'],
+  ['wireguard','WireGuard','Provenance, reachability, handshake and self-healing workflow','shield'],
+  ['repair','AI Healer','Deterministic Repair Lab + Hugging Face Qwen advisor + verification','spark'],
+  ['settings','Settings','Runtime, network, export, storage and appearance preferences','settings'],
+  ['infrastructure','Infrastructure','Cloudflare Worker, model backend and Real Test Bridge','server'],
 ];
 
 const iconPaths = {
@@ -37,7 +37,7 @@ export function buildShell(){
         <div class="nav-group"><div class="nav-label">Workspace</div>${pages.slice(0,5).map(navMarkup).join('')}</div>
         <div class="nav-group"><div class="nav-label">Intelligence</div>${pages.slice(5,7).map(navMarkup).join('')}</div>
         <div class="nav-group"><div class="nav-label">System</div>${pages.slice(7).map(navMarkup).join('')}</div>
-        <div class="sidebar-foot"><div class="plan"><strong>Hosted-ready build</strong><small>Cloudflare fetch + HF model advisor</small><div class="plan-bar"><i></i></div><small id="sideStatus">Ready</small></div></div>
+        <div class="sidebar-foot"><div class="plan"><strong>V15 NetworkCanonical parity</strong><small>Worker reachability + HF advisor + Real Bridge verification</small><div class="plan-bar"><i></i></div><small id="sideStatus">Ready</small></div></div>
       </aside>
       <main class="main">
         <header class="topbar"><div class="page-title"><h1 id="pageTitle"></h1><p id="pageSubtitle"></p></div><div class="top-actions"><button class="btn" id="verifySourcesTop">Verify sources</button><button class="btn primary" id="harvestTop">Fetch enabled</button></div></header>
