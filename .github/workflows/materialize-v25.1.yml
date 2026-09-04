@@ -48,7 +48,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for f in index.html proxyharvest.html proxyharvest.js package.json vercel.json patches/ui-v26.js patches/ui-v26.css patches/auto-pipeline-v27.js patches/auto-pipeline-v27.css scripts/build.mjs api/ai/health.js api/ai/advise.js worker/proxyharvest-gateway.js; do
+          for f in index.html proxyharvest.html proxyharvest.js package.json vercel.json patches/ui-v26.js patches/ui-v26.css patches/auto-pipeline-v27.js patches/auto-pipeline-v27.css patches/layout-v28.css scripts/build.mjs api/ai/health.js api/ai/advise.js worker/proxyharvest-gateway.js; do
             test -f "$f" || { echo "MISSING FILE: $f"; exit 1; }
             echo "FOUND FILE: $f"
           done
@@ -77,6 +77,18 @@ jobs:
           grep -Fq 'ph:v27-pipeline-complete' patches/auto-pipeline-v27.js
           echo 'PASS autonomous-pipeline-contract'
 
+      - name: Validate viewport layout repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'width:100vw!important' patches/layout-v28.css
+          grep -Fq 'height:100dvh!important' patches/layout-v28.css
+          grep -Fq 'transform:none!important' patches/layout-v28.css
+          grep -Fq 'grid-template-columns:242px minmax(0,1fr)!important' patches/layout-v28.css
+          grep -Fq '#phv27AutoPipeline' patches/layout-v28.css
+          grep -Fq 'display:none!important' patches/layout-v28.css
+          echo 'PASS viewport-layout-repair'
+
       - name: Build deploy output
         shell: bash
         run: |
@@ -89,14 +101,18 @@ jobs:
           test -f public/patches/ui-v26.css
           test -f public/patches/auto-pipeline-v27.js
           test -f public/patches/auto-pipeline-v27.css
+          test -f public/patches/layout-v28.css
           test -f public/build.json
           grep -Fq 'data-proxyharvest-ui="v26"' public/index.html
           grep -Fq 'data-proxyharvest-pipeline="v27"' public/index.html
+          grep -Fq 'data-proxyharvest-layout="v28"' public/index.html
           grep -Fq 'patches/ui-v26.css' public/index.html
           grep -Fq 'patches/ui-v26.js' public/index.html
           grep -Fq 'patches/auto-pipeline-v27.css' public/index.html
           grep -Fq 'patches/auto-pipeline-v27.js' public/index.html
+          grep -Fq 'patches/layout-v28.css' public/index.html
           grep -Fq '"autoPipeline": "27.0.0-auto-pipeline"' public/build.json
+          grep -Fq '"layoutPatch": "28.0.0-viewport-fluid"' public/build.json
           echo 'PASS deploy-output'
 
       - name: Truthful verification safety gate
@@ -115,4 +131,4 @@ jobs:
 
       - name: Summary
         run: |
-          echo "GitHub main source is canonical: attachment UI/runtime + V26 UI + V27 autonomous fetch/verify/score/rank pipeline + AI API + Worker source."
+          echo "GitHub main is canonical: attachment UI/runtime + V26 UI + V27 autonomous pipeline + V28 full-viewport layout repair + AI API + Worker source."
