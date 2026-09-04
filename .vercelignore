@@ -1,0 +1,8 @@
+requirements.txt
+app.py
+deploy_space.py
+*.pyc
+__pycache__/
+.venv/
+venv/
+deploy/
