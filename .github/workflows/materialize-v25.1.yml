@@ -18,11 +18,11 @@ jobs:
       - name: Materialize V25.1 runtime
         run: |
           set -euo pipefail
-          if bash deploy/v25.1/reconstruct.sh; then
+          if [ -f deploy/v25.1/reconstruct.sh ] && bash deploy/v25.1/reconstruct.sh; then
             echo "chunked artifact reconstructed"
           else
-            echo "chunked artifact incomplete; falling back to verified Vercel preview fetch"
-            BASE="https://proxyharvest-n8sqkc53s-dreammakers-projects-6bd02e6d.vercel.app"
+            echo "chunked artifact unavailable; using fresh Vercel runtime export with marker verification"
+            BASE="${PROXYHARVEST_V25_1_RUNTIME_URL:-https://proxyharvest-d4icfujr6-dreammakers-projects-6bd02e6d.vercel.app}"
             rm -rf static app.py deploy_space.py requirements.txt
             curl -fsSL "$BASE/" -o index.html
             curl -fsSL "$BASE/proxyharvest.html" -o proxyharvest.html || cp index.html proxyharvest.html
@@ -34,6 +34,10 @@ jobs:
             curl -fsSL "$BASE/api/hf-advisor.js" -o api/hf-advisor.js || cat > api/hf-advisor.js <<'JS'
           export default async function handler(req, res) { res.status(503).json({ ok:false, error:'HF advisor not bundled in fallback fetch' }); }
           JS
+            grep -R "ProxyHarvest" index.html proxyharvest.html proxyharvest.js
+            grep -R "forceRefresh" proxyharvest.js
+            grep -R "verifyAllSources" proxyharvest.js
+            grep -R "WireGuard" proxyharvest.js
           fi
       - name: Commit materialized runtime
         run: |
