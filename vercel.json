@@ -1,16 +1,21 @@
 {
+  "version": 2,
   "cleanUrls": true,
   "trailingSlash": false,
+  "buildCommand": "npm run build",
+  "outputDirectory": "public",
   "rewrites": [
     { "source": "/proxyharvest", "destination": "/index.html" },
-    { "source": "/proxyharvest.html", "destination": "/index.html" }
+    { "source": "/proxyharvest.html", "destination": "/index.html" },
+    { "source": "/app", "destination": "/index.html" }
   ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
         { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "no-referrer" }
+        { "key": "Referrer-Policy", "value": "no-referrer" },
+        { "key": "Cache-Control", "value": "no-store" }
       ]
     }
   ]
