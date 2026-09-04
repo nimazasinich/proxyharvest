@@ -50,8 +50,6 @@ jobs:
                   clean.append(data)
                   continue
 
-              # Connector transport introduced one extra character in part02.
-              # Repair only when deleting exactly one byte reproduces the known source blob SHA.
               repaired = None
               if len(data) > 0:
                   for i in range(len(data)):
@@ -84,11 +82,14 @@ jobs:
           grep -q "Qwen/Qwen2.5-Coder-0.5B-Instruct" app.py
           grep -q "proxyharvest-gateway.amin-chinisaz-edu.workers.dev" static/catalog.js
 
-      - name: Remove bootstrap transport
+      - name: Prepare source-only commit
         shell: bash
         run: |
+          set -euo pipefail
           rm -rf bootstrap
-          rm -f .github/workflows/bootstrap-project.yml
+          # GITHUB_TOKEN has contents:write but not workflows:write.
+          # The deployment workflow is added separately by the authenticated connector.
+          rm -f .github/workflows/deploy-hf-space.yml
 
       - name: Commit project files
         shell: bash
