@@ -59,6 +59,14 @@ function parseWireGuard(uri) {
   };
 }
 
+export function emptyProbe(method='none') {
+  return {
+    dns:'unknown', browserReachable:null, workerReachable:null, bridgeReachable:null,
+    protocolVerified:false, tunnelVerified:false, latencyMs:null,
+    method, confidence:'unknown', evidence:[], testedAt:null,
+  };
+}
+
 export function parseConfig(uri, meta={}) {
   try {
     const type = String(uri).split('://')[0].toLowerCase();
@@ -71,12 +79,23 @@ export function parseConfig(uri, meta={}) {
     const cfg = {
       id, raw:uri, ...base,
       sourceId: meta.sourceId || '', sourceName:meta.sourceName || '', sourceUrl:meta.sourceUrl || '',
-      importedAt: Date.now(), tested:false, live:null, latency:null,
-      probe:{ method:'none', confidence:'unknown', protocolVerified:false, tunnelVerified:false, evidence:[] },
+      importedAt: Date.now(), tested:false, live:null, reachable:false, latency:null,
+      probe:emptyProbe(),
     };
     cfg.score = scoreConfig(cfg);
     return cfg;
   } catch { return null; }
+}
+
+function anyReachable(p={}) {
+  return p.browserReachable === true || p.workerReachable === true || p.bridgeReachable === true;
+}
+function knownReachability(p={}) {
+  return [p.browserReachable,p.workerReachable,p.bridgeReachable].filter(v => v === true || v === false);
+}
+function explicitReachabilityFailure(p={}) {
+  const known = knownReachability(p);
+  return known.length > 0 && known.every(v => v === false);
 }
 
 export function scoreConfig(cfg) {
@@ -88,7 +107,8 @@ export function scoreConfig(cfg) {
   if (cfg.type === 'vless') s += 5;
   if (cfg.type === 'wireguard') s += 3;
   if (cfg.probe?.protocolVerified || cfg.probe?.tunnelVerified) s += 20;
-  else if (cfg.live === false) s -= 20;
+  else if (anyReachable(cfg.probe)) s += 3;
+  else if (explicitReachabilityFailure(cfg.probe) || cfg.live === false) s -= 20;
   if (Number.isFinite(cfg.latency)) s += cfg.latency < 250 ? 10 : cfg.latency < 700 ? 4 : -4;
   return Math.max(0, Math.min(100, Math.round(s)));
 }
@@ -105,9 +125,11 @@ export function dedupeConfigs(items=[]) {
 
 export function summarizeVerification(cfg) {
   const p = cfg?.probe || {};
-  if (p.tunnelVerified || p.protocolVerified) return {key:'verified', label:'Verified', tone:'good'};
-  if (cfg?.tested && cfg?.live === false) return {key:'failed', label:'Failed', tone:'bad'};
-  if (p.method && p.method !== 'none') return {key:'reachable', label:'Reachable only', tone:'warn'};
+  if (p.tunnelVerified === true) return {key:'verified', label:'Tunnel verified', tone:'good'};
+  if (p.protocolVerified === true) return {key:'verified', label:cfg?.type === 'wireguard' ? 'Handshake verified' : 'Protocol verified', tone:'good'};
+  if (anyReachable(p) || cfg?.reachable === true) return {key:'reachable', label:'Reachable only', tone:'warn'};
+  if (cfg?.tested && (explicitReachabilityFailure(p) || cfg?.live === false)) return {key:'failed', label:'Failed', tone:'bad'};
+  if (p.method && p.method !== 'none' && p.method !== 'repair-candidate') return {key:'reachable', label:'Probe evidence', tone:'warn'};
   return {key:'untested', label:'Untested', tone:'muted'};
 }
 
@@ -123,7 +145,7 @@ export function diagnose(cfg) {
     if (!cfg.address) issues.push({code:'wg_address_missing', severity:'high', text:'WireGuard interface address is missing'});
     if (!(cfg.probe?.tunnelVerified || cfg.probe?.protocolVerified)) issues.push({code:'wg_unverified', severity:'info', text:'No WireGuard handshake/tunnel verification evidence'});
   }
-  if (cfg?.tested && cfg?.live === false) issues.push({code:'failed_probe', severity:'medium', text:'Most recent verification attempt failed'});
+  if (summarizeVerification(cfg).key === 'failed') issues.push({code:'failed_probe', severity:'medium', text:'Most recent reachability/verification attempt failed'});
   if (Number(cfg?.latency) > 1500) issues.push({code:'high_latency', severity:'low', text:'Observed latency is very high'});
   return issues;
 }
@@ -135,20 +157,26 @@ export function generateCandidates(cfg, issues=diagnose(cfg)) {
     out.push({id:'use-host-as-sni', field:'sni', value:cfg.host, confidence:58, reason:'Use hostname as SNI candidate; requires verification'});
   }
   if (codes.has('ws_path')) out.push({id:'ws-root-path', field:'path', value:'/', confidence:45, reason:'Common WebSocket fallback path; requires verification'});
-  if (codes.has('invalid_port')) {
-    out.push({id:'port-443', field:'port', value:443, confidence:38, reason:'Conservative TLS port candidate; requires verification'});
-  }
+  if (codes.has('invalid_port')) out.push({id:'port-443', field:'port', value:443, confidence:38, reason:'Conservative TLS port candidate; requires verification'});
   if (codes.has('high_latency')) out.push({id:'keep-original', field:'noop', value:null, confidence:90, reason:'Do not mutate config solely because of latency'});
   return out;
 }
 
 export function sanitizeForModel(cfg, issues, candidates) {
+  const p = cfg?.probe || {};
   return {
     protocol:String(cfg.type||'unknown'), endpoint:`${cfg.host||'?'}:${Number(cfg.port||0)}`,
     security:String(cfg.security||''), network:String(cfg.net||''), sni_present:Boolean(cfg.sni), path_present:Boolean(cfg.path),
     score:Number(cfg.score||0), tested:Boolean(cfg.tested), live:cfg.live === true ? true : cfg.live === false ? false : null,
     latency_ms:Number.isFinite(cfg.latency) ? Math.round(cfg.latency) : null,
-    verification:{ method:String(cfg.probe?.method||'none'), protocol_verified:cfg.probe?.protocolVerified===true, tunnel_verified:cfg.probe?.tunnelVerified===true },
+    verification:{
+      method:String(p.method||'none'),
+      worker_reachable:p.workerReachable===true,
+      bridge_reachable:p.bridgeReachable===true,
+      browser_reachable:p.browserReachable===true,
+      protocol_verified:p.protocolVerified===true,
+      tunnel_verified:p.tunnelVerified===true,
+    },
     issues:issues.map(x => ({code:x.code,severity:x.severity,text:x.text})),
     candidates:candidates.map(c => ({id:c.id,field:c.field,value:c.value,rule_confidence:c.confidence,reason:c.reason})),
   };
@@ -158,8 +186,8 @@ export function applyCandidate(cfg, candidate) {
   if (!cfg || !candidate || candidate.field === 'noop') return {...cfg};
   const next = structuredClone(cfg);
   next[candidate.field] = candidate.value;
-  next.tested = false; next.live = null; next.latency = null;
-  next.probe = {method:'repair-candidate',confidence:'unknown',protocolVerified:false,tunnelVerified:false,evidence:['Candidate applied; verification required.']};
+  next.tested = false; next.live = null; next.reachable = false; next.latency = null;
+  next.probe = {...emptyProbe('repair-candidate'), evidence:['Candidate applied; verification required.']};
   next.score = scoreConfig(next);
   return next;
 }
