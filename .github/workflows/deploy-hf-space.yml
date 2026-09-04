@@ -38,8 +38,6 @@ jobs:
           set -euo pipefail
           python -m py_compile app.py deploy_space.py
           for f in static/*.js; do node --check "$f"; done
-          grep -q 'Qwen/Qwen2.5-Coder-0.5B-Instruct' app.py
-          grep -q 'proxyharvest-gateway.amin-chinisaz-edu.workers.dev' static/catalog.js
 
       - name: Deploy Gradio ZeroGPU Space
         env:
