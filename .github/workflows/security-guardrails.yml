@@ -26,24 +26,27 @@ jobs:
             fail=1
           fi
 
-          if find deploy -type f \( \
+          blocked_artifacts="$({ find deploy -type f \( \
             -path 'deploy/v25.1*' -o \
             -path 'deploy/*/chunks/*' -o \
             -path 'deploy/*/xz*/*' -o \
             -path 'deploy/*/transfer/*' \
-          \) 2>/dev/null | grep -q .; then
+          \) 2>/dev/null || true; } | sort)"
+
+          if [ -n "$blocked_artifacts" ]; then
             echo "::error::Staged chunked deployment artifacts are blocked. Commit explicit runtime source files instead."
-            find deploy -type f \( \
-              -path 'deploy/v25.1*' -o \
-              -path 'deploy/*/chunks/*' -o \
-              -path 'deploy/*/xz*/*' -o \
-              -path 'deploy/*/transfer/*' \
-            \) 2>/dev/null || true
+            printf '%s\n' "$blocked_artifacts"
             fail=1
           fi
 
-          if grep -RIn "curl -fsSL .*vercel\.app\|contents: write\|git push origin HEAD" .github/workflows 2>/dev/null; then
+          # Scan workflow files other than this guardrail file, so the blocked-pattern
+          # strings documented here do not create a self-match false positive.
+          unsafe_workflows="$({ grep -RInE 'curl -fsSL .*vercel\.app|contents:[[:space:]]*write|git push origin HEAD' .github/workflows \
+            --exclude='security-guardrails.yml' 2>/dev/null || true; } | sort)"
+
+          if [ -n "$unsafe_workflows" ]; then
             echo "::error::Unsafe workflow pattern detected: external preview hydration, contents:write, or CI push."
+            printf '%s\n' "$unsafe_workflows"
             fail=1
           fi
 
