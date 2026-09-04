@@ -11,39 +11,21 @@ models:
   - Qwen/Qwen2.5-Coder-0.5B-Instruct
 ---
 
-# ProxyHarvest
+# ProxyHarvest V18
 
-ProxyHarvest is a multi-file rebuild focused on readable workspaces, canonical Cloudflare source transport, truthful verification semantics, and a bounded Hugging Face model advisor.
+Readable multi-file rebuild of ProxyHarvest with the canonical Cloudflare fetch gateway, truthful verification semantics, and a real Hugging Face model advisor.
 
-## Architecture
+## Free-account AI architecture
 
-- **Frontend:** modular HTML/CSS/ES modules under `static/`
-- **Source transport:** canonical Cloudflare Worker only by default
-- **Repair Lab:** deterministic candidate generator + Qwen advisor
-- **Model:** `Qwen/Qwen2.5-Coder-0.5B-Instruct`
-- **HF runtime:** Gradio ZeroGPU via `@spaces.GPU`
+The Space is designed for **Gradio ZeroGPU**, the Hugging Face compute option that eligible free personal accounts can host. The model is loaded directly from the Hub with Transformers and moved to the ZeroGPU CUDA environment at Space startup:
 
-The model is loaded directly from the Hugging Face Hub with `transformers.pipeline()`. Model weights are not committed to this repository and are not downloaded by the browser.
-
-Model advice is never treated as protocol/tunnel verification. Raw proxy URIs, UUIDs, passwords, tokens and WireGuard private/preshared keys are excluded from the model payload.
-
-## Local development
-
-```bash
-python -m venv .venv
-. .venv/bin/activate
-pip install -r requirements.txt
-python app.py
+```python
+from transformers import pipeline
+pipe = pipeline("text-generation", model="Qwen/Qwen2.5-Coder-0.5B-Instruct", device=0)
 ```
 
-## Hugging Face Space
+The model function is decorated with `@spaces.GPU(duration=45)`. Model weights are not bundled in this repository and the user's browser never downloads them.
 
-This repository is prepared for a Gradio ZeroGPU Space. `deploy_space.py` creates/updates `<hf-user>/ProxyHarvest-V18` when `HF_TOKEN` is available in the environment. The GitHub Actions workflow expects `HF_TOKEN` as a repository secret; no credential belongs in source control.
+The deterministic Repair Engine creates bounded candidate fixes. Qwen may only select existing candidate IDs. Raw proxy URIs, UUIDs, passwords and WireGuard private keys are not sent to the model.
 
-## Verification boundary
-
-| Component | Fetch sources | Endpoint reachability | Proxy tunnel verification | WireGuard handshake |
-|---|---:|---:|---:|---:|
-| Cloudflare Worker | Yes | Yes | No | No |
-| Qwen advisor | No | No | No | No |
-| Real Test bridge/engine | Optional | Yes | Yes if protocol engine supports it | Yes with WG-capable engine |
+Model advice never counts as protocol/tunnel verification.
