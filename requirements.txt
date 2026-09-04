@@ -1,7 +1,0 @@
-gradio>=5.44,<6
-transformers==4.56.1
-torch==2.8.0
-accelerate==1.10.1
-safetensors>=0.4.5
-
-uvicorn[standard]>=0.30,<1
