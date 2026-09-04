@@ -26,9 +26,47 @@ jobs:
           test -f bootstrap/part02
           test -f bootstrap/part03
           test -f bootstrap/part04
-          cat bootstrap/part00 bootstrap/part01 bootstrap/part02 bootstrap/part03 bootstrap/part04 \
-            | tr -cd 'A-Za-z0-9+/=' \
-            > /tmp/project.tgz.b64
+
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib
+
+          expected = {
+              'part00': 'a1a842da13ba7e2c29710ecddfbb8c4364785b71',
+              'part01': '60228b7d911d63613300a4e848c926e4f504ed29',
+              'part02': 'c1418afcc73bf3486738748607fae8bb85d14bbc',
+              'part03': 'd5f640b8e97c82d4f1b8fc1f6af0be41e6809786',
+              'part04': 'd0b4ebcedd886027e3ba1a9870acded8d7610574',
+          }
+
+          def blob_sha(data: bytes) -> str:
+              return hashlib.sha1(f'blob {len(data)}\0'.encode() + data).hexdigest()
+
+          clean = []
+          for name in ['part00','part01','part02','part03','part04']:
+              data = Path('bootstrap', name).read_bytes()
+              target = expected[name]
+              if blob_sha(data) == target:
+                  clean.append(data)
+                  continue
+
+              # Connector transport introduced one extra character in part02.
+              # Repair only when deleting exactly one byte reproduces the known source blob SHA.
+              repaired = None
+              if len(data) > 0:
+                  for i in range(len(data)):
+                      candidate = data[:i] + data[i+1:]
+                      if blob_sha(candidate) == target:
+                          repaired = candidate
+                          print(f'{name}: removed one transport byte at offset {i}')
+                          break
+              if repaired is None:
+                  raise SystemExit(f'{name}: Git blob SHA mismatch and deterministic repair failed')
+              clean.append(repaired)
+
+          Path('/tmp/project.tgz.b64').write_bytes(b''.join(clean))
+          PY
+
           base64 -d /tmp/project.tgz.b64 > /tmp/project.tgz
           echo "066067e70e55419569d41818ee8f831e056c3509483e1fa98a595b1375f5cd1a  /tmp/project.tgz" | sha256sum -c -
           tar -xzf /tmp/project.tgz -C .
