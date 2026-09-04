@@ -1,0 +1,25 @@
+name: Materialize ProxyHarvest V25.1
+on:
+  push:
+    branches:
+      - deploy/v25.1-fetchcomplete
+    paths:
+      - 'deploy/v25.1/READY'
+permissions:
+  contents: write
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reconstruct exact V25.1 artifact
+        run: bash deploy/v25.1/reconstruct.sh
+      - name: Commit materialized runtime
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'release: materialize ProxyHarvest V25.1 FetchComplete' || exit 0
+          git push origin HEAD:deploy/v25.1-fetchcomplete
