@@ -1,14 +1,24 @@
 import { rm, mkdir, readFile, writeFile, copyFile, cp } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 
-const cssTag = '<link rel="stylesheet" href="/patches/ui-v26.css" data-proxyharvest-ui="v26">';
-const jsTag = '<script defer src="/patches/ui-v26.js" data-proxyharvest-ui="v26"></script>';
+const cssTags = [
+  '<link rel="stylesheet" href="/patches/ui-v26.css" data-proxyharvest-ui="v26">',
+  '<link rel="stylesheet" href="/patches/auto-pipeline-v27.css" data-proxyharvest-pipeline="v27">'
+];
+const jsTags = [
+  '<script defer src="/patches/ui-v26.js" data-proxyharvest-ui="v26"></script>',
+  '<script defer src="/patches/auto-pipeline-v27.js" data-proxyharvest-pipeline="v27"></script>'
+];
 
 function inject(html) {
   let out = html;
-  if (!out.includes('data-proxyharvest-ui="v26"')) {
-    out = out.includes('</head>') ? out.replace('</head>', `${cssTag}\n</head>`) : `${cssTag}\n${out}`;
-    out = out.includes('</body>') ? out.replace('</body>', `${jsTag}\n</body>`) : `${out}\n${jsTag}`;
+  for (const tag of cssTags) {
+    const marker = tag.match(/data-[^=]+="[^"]+"/)?.[0];
+    if (marker && !out.includes(marker)) out = out.includes('</head>') ? out.replace('</head>', `${tag}\n</head>`) : `${tag}\n${out}`;
+  }
+  for (const tag of jsTags) {
+    const marker = tag.match(/data-[^=]+="[^"]+"/)?.[0];
+    if (marker && !out.includes(marker)) out = out.includes('</body>') ? out.replace('</body>', `${tag}\n</body>`) : `${out}\n${tag}`;
   }
   return out;
 }
@@ -30,6 +40,7 @@ await cp('patches', 'public/patches', { recursive: true });
 const manifest = {
   build: actual,
   uiPatch: '26.0.0-github-main-ui',
+  autoPipeline: '27.0.0-auto-pipeline',
   source: 'github-main',
   indexSha256: createHash('sha256').update(index).digest('hex'),
   runtimeSha256: createHash('sha256').update(runtime).digest('hex'),
