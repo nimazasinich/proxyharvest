@@ -1,0 +1,50 @@
+name: ProxyHarvest Security Guardrails
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  guardrails:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Block unsafe auto-materialization paths
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          fail=0
+
+          if [ -f .github/workflows/materialize-v25.1.yml ]; then
+            echo "::error::.github/workflows/materialize-v25.1.yml is blocked. Do not auto-materialize deployment payloads from CI."
+            fail=1
+          fi
+
+          if find deploy -type f \( \
+            -path 'deploy/v25.1*' -o \
+            -path 'deploy/*/chunks/*' -o \
+            -path 'deploy/*/xz*/*' -o \
+            -path 'deploy/*/transfer/*' \
+          \) 2>/dev/null | grep -q .; then
+            echo "::error::Staged chunked deployment artifacts are blocked. Commit explicit runtime source files instead."
+            find deploy -type f \( \
+              -path 'deploy/v25.1*' -o \
+              -path 'deploy/*/chunks/*' -o \
+              -path 'deploy/*/xz*/*' -o \
+              -path 'deploy/*/transfer/*' \
+            \) 2>/dev/null || true
+            fail=1
+          fi
+
+          if grep -RIn "curl -fsSL .*vercel\.app\|contents: write\|git push origin HEAD" .github/workflows 2>/dev/null; then
+            echo "::error::Unsafe workflow pattern detected: external preview hydration, contents:write, or CI push."
+            fail=1
+          fi
+
+          exit "$fail"
