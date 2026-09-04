@@ -9,6 +9,8 @@ on:
       - 'index.html'
       - 'vercel.json'
       - 'static/**'
+      - 'api/**'
+      - 'worker/**'
       - '.github/workflows/materialize-v25.1.yml'
 
 permissions:
@@ -32,20 +34,27 @@ jobs:
           test -f vercel.json
           test -f static/index.html
           test -f static/app.js
+          test -f static/v15-compat.js
           test -f static/styles.css
+          test -f api/ai/health.js
+          test -f api/ai/advise.js
+          test -f worker/proxyharvest-gateway.js
           grep -q 'ProxyHarvest' index.html
           grep -q '/static/app.js' index.html
           grep -q 'rewrites' vercel.json
+          grep -q 'bootV15Compatibility' static/app.js
+          grep -q 'Export Working 100' static/v15-compat.js
+          grep -q '/api/ai/advise' static/repair.js
 
-      - name: Validate JavaScript modules
+      - name: Validate JavaScript modules and serverless functions
         shell: bash
         run: |
           set -euo pipefail
-          for f in static/*.js; do
+          for f in static/*.js api/ai/*.js worker/*.js; do
             echo "checking $f"
             node --check "$f"
           done
 
       - name: Vercel redeploy note
         run: |
-          echo "GitHub source is Vercel-ready. Redeploy from Vercel/Git integration; this workflow does not mutate files or fetch from Vercel preview URLs."
+          echo "GitHub source is Vercel-ready. Redeploy from Vercel/Git integration; this workflow validates UI, export, ping/probe, AI API, and Worker source without mutating files or fetching from Vercel preview URLs."
