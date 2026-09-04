@@ -2,6 +2,7 @@ name: Materialize ProxyHarvest V25.1
 on:
   push:
     branches:
+      - main
       - deploy/v25.1-fetchcomplete
     paths:
       - 'deploy/v25.1/READY'
@@ -45,5 +46,4 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
           git commit -m 'release: materialize ProxyHarvest V25.1 FetchComplete' || true
-          git push origin HEAD:deploy/v25.1-fetchcomplete
-          git push origin HEAD:main
+          git push origin HEAD:${GITHUB_REF_NAME}
