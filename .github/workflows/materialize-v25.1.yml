@@ -45,24 +45,33 @@ jobs:
         run: |
           set -euo pipefail
           for f in index.html vercel.json static/app.js static/ui.js static/engine.js static/v15-compat.js static/styles.css static/repair.js api/ai/health.js api/ai/advise.js worker/proxyharvest-gateway.js; do
-            test -f "$f" || { echo "MISSING $f"; exit 1; }
-            echo "FOUND $f"
+            test -f "$f" || { echo "MISSING FILE: $f"; exit 1; }
+            echo "FOUND FILE: $f"
           done
-          grep -Fq 'ProxyHarvest' index.html
-          grep -Fq '/static/app.js' index.html
-          grep -Fq 'buildCommand' vercel.json
-          grep -Fq 'outputDirectory' vercel.json
-          grep -Fq 'bootV15Compatibility' static/app.js
-          grep -Fq 'V15 NetworkCanonical parity' static/ui.js
-          grep -Fq 'Real Verify Top 100' static/v15-compat.js
-          grep -Fq 'Export Working 100' static/v15-compat.js
-          grep -Fq 'Export Reachable' static/v15-compat.js
-          grep -Fq 'Export Verified Live' static/v15-compat.js
-          grep -Fq 'workerReachable' static/engine.js
-          grep -Fq 'bridgeReachable' static/engine.js
-          grep -Fq 'protocolVerified' static/engine.js
-          grep -Fq 'tunnelVerified' static/engine.js
-          grep -Fq '/api/ai/advise' static/repair.js
+          check_marker() {
+            file="$1"; marker="$2"
+            if grep -Fq -- "$marker" "$file"; then
+              echo "MARKER OK: $file :: $marker"
+            else
+              echo "MARKER MISSING: $file :: $marker"
+              exit 1
+            fi
+          }
+          check_marker index.html 'ProxyHarvest'
+          check_marker index.html '/static/app.js'
+          check_marker vercel.json 'buildCommand'
+          check_marker vercel.json 'outputDirectory'
+          check_marker static/app.js 'bootV15Compatibility'
+          check_marker static/ui.js 'V15 NetworkCanonical parity'
+          check_marker static/v15-compat.js 'Real Verify Top 100'
+          check_marker static/v15-compat.js 'Export Working 100'
+          check_marker static/v15-compat.js 'Export Reachable'
+          check_marker static/v15-compat.js 'Export Verified Live'
+          check_marker static/engine.js 'workerReachable'
+          check_marker static/engine.js 'bridgeReachable'
+          check_marker static/engine.js 'protocolVerified'
+          check_marker static/engine.js 'tunnelVerified'
+          check_marker static/repair.js '/api/ai/advise'
           echo 'PASS v15-parity-source'
 
       - name: Validate JavaScript and Vercel-equivalent build
@@ -88,7 +97,7 @@ jobs:
             echo 'FAIL: worker reachability must never become live/verified'
             exit 1
           fi
-          grep -Fq "cfg.live = cfg.probe.protocolVerified || cfg.probe.tunnelVerified ? true : null" static/v15-compat.js
+          grep -Fq 'cfg.live = cfg.probe.protocolVerified || cfg.probe.tunnelVerified ? true : null' static/v15-compat.js
           echo 'PASS truthful-verification'
 
       - name: Vercel redeploy note
