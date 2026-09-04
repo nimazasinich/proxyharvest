@@ -1,0 +1,145 @@
+/* ProxyHarvest V28 — viewport-safe shell repair
+   The legacy premium runtime scales a fixed 1672x941 canvas. This patch deliberately
+   neutralizes that transform so the GitHub/Vercel build always fills the viewport. */
+
+body[data-premium-shell="1"] .ph-app-shell{
+  position:fixed!important;
+  inset:0!important;
+  left:0!important;
+  top:0!important;
+  width:100vw!important;
+  max-width:none!important;
+  height:100dvh!important;
+  min-height:0!important;
+  margin:0!important;
+  transform:none!important;
+  transform-origin:0 0!important;
+  grid-template-columns:242px minmax(0,1fr)!important;
+  overflow:hidden!important;
+  box-shadow:none!important;
+}
+
+body[data-premium-shell="1"] .ph-sidebar{
+  width:242px!important;
+  height:100dvh!important;
+  min-height:0!important;
+  overflow:hidden!important;
+}
+
+body[data-premium-shell="1"] .ph-content{
+  width:auto!important;
+  min-width:0!important;
+  max-width:none!important;
+  height:100dvh!important;
+  min-height:0!important;
+  overflow:hidden!important;
+  display:flex!important;
+  flex-direction:column!important;
+}
+
+body[data-premium-shell="1"] .ph-global-topbar{
+  width:100%!important;
+  min-width:0!important;
+  flex:0 0 auto!important;
+  box-sizing:border-box!important;
+}
+
+body[data-premium-shell="1"] .ph-global-title,
+body[data-premium-shell="1"] .ph-global-actions,
+body[data-premium-shell="1"] .ph-command-slot{
+  min-width:0!important;
+}
+
+body[data-premium-shell="1"] .ph-global-actions{
+  margin-left:auto!important;
+  flex:0 1 auto!important;
+}
+
+body[data-premium-shell="1"] .tab-content.active{
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  min-height:0!important;
+  flex:1 1 auto!important;
+  box-sizing:border-box!important;
+}
+
+body[data-premium-shell="1"] #tab-dashboard{
+  height:auto!important;
+  min-height:0!important;
+  overflow:hidden!important;
+  padding:0!important;
+}
+
+body[data-premium-shell="1"] .ph-premium-dashboard{
+  width:100%!important;
+  max-width:none!important;
+  height:100%!important;
+  min-height:0!important;
+  grid-template-columns:278px minmax(0,1fr) 290px!important;
+  overflow:hidden!important;
+}
+
+body[data-premium-shell="1"] .ph-route-col,
+body[data-premium-shell="1"] .ph-workspace,
+body[data-premium-shell="1"] .ph-activity{
+  min-width:0!important;
+  min-height:0!important;
+}
+
+body[data-premium-shell="1"] .ph-workspace{
+  width:auto!important;
+  max-width:none!important;
+  overflow:auto!important;
+}
+
+/* V27's autonomous engine remains active; only its extra dashboard box is removed.
+   Progress continues through the existing Process Engine, counters and live summary. */
+#phv27AutoPipeline{
+  display:none!important;
+}
+
+/* Keep settings and other workspaces full-width and independently scrollable. */
+body[data-premium-shell="1"] #tab-settings,
+body[data-premium-shell="1"] #tab-configs,
+body[data-premium-shell="1"] #tab-splitnet,
+body[data-premium-shell="1"] #tab-wireguard,
+body[data-premium-shell="1"] #tab-ai-healer,
+body[data-premium-shell="1"] #tab-infrastructure,
+body[data-premium-shell="1"] #tab-sources,
+body[data-premium-shell="1"] #tab-ircf{
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  min-height:0!important;
+  overflow:auto!important;
+  box-sizing:border-box!important;
+}
+
+@media (max-width:1500px){
+  body[data-premium-shell="1"] .ph-app-shell{grid-template-columns:220px minmax(0,1fr)!important}
+  body[data-premium-shell="1"] .ph-sidebar{width:220px!important}
+  body[data-premium-shell="1"] .ph-premium-dashboard{grid-template-columns:230px minmax(0,1fr) 270px!important}
+}
+
+@media (max-width:1180px){
+  body[data-premium-shell="1"] .ph-app-shell{grid-template-columns:190px minmax(0,1fr)!important}
+  body[data-premium-shell="1"] .ph-sidebar{width:190px!important;padding-left:10px!important;padding-right:10px!important}
+  body[data-premium-shell="1"] .ph-premium-dashboard{grid-template-columns:200px minmax(0,1fr) 240px!important}
+  body[data-premium-shell="1"] .ph-global-topbar{padding-left:14px!important;padding-right:14px!important}
+  body[data-premium-shell="1"] .ph-command-slot{gap:4px!important}
+  body[data-premium-shell="1"] .ph-command-slot .btn{padding-left:8px!important;padding-right:8px!important}
+}
+
+@media (max-width:900px){
+  body[data-premium-shell="1"] .ph-app-shell{grid-template-columns:78px minmax(0,1fr)!important}
+  body[data-premium-shell="1"] .ph-sidebar{width:78px!important;padding:12px 8px!important}
+  body[data-premium-shell="1"] .ph-sidebar .ph-brand-name,
+  body[data-premium-shell="1"] .ph-sidebar .ph-nav-item>span,
+  body[data-premium-shell="1"] .ph-sidebar .ph-nav-count,
+  body[data-premium-shell="1"] .ph-sidebar .ph-plan-card,
+  body[data-premium-shell="1"] .ph-sidebar .ph-user-card>div:not(.ph-avatar),
+  body[data-premium-shell="1"] .ph-sidebar .ph-collapse-label{display:none!important}
+  body[data-premium-shell="1"] .ph-premium-dashboard{grid-template-columns:170px minmax(0,1fr)!important}
+  body[data-premium-shell="1"] .ph-activity{display:none!important}
+}
