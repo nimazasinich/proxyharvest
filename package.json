@@ -1,8 +1,11 @@
 {
   "name": "proxyharvest",
-  "version": "25.1.0-main-vercel-source",
+  "version": "25.1.1-main-node-only-redeploy",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "node --check static/app.js && node --check static/core.js && node --check static/engine.js && node --check static/workspaces.js && node --check static/repair.js && node --check static/v15-compat.js && node --check api/ai/health.js && node --check api/ai/advise.js && node --check worker/proxyharvest-gateway.js && rm -rf public && mkdir -p public && cp index.html public/index.html && cp -R static public/static"
   }
