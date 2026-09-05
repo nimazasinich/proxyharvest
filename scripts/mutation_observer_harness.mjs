@@ -38,24 +38,14 @@ const dom = new JSDOM(html, {
     } catch {}
 
     window.matchMedia = window.matchMedia || (() => ({
-      matches: false,
-      media: '',
-      onchange: null,
-      addListener() {},
-      removeListener() {},
-      addEventListener() {},
-      removeEventListener() {},
+      matches: false, media: '', onchange: null,
+      addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {},
       dispatchEvent() { return false; }
     }));
     window.fetch = async () => ({
-      ok: false,
-      status: 503,
-      statusText: 'Harness offline',
-      headers: { get: () => null },
-      json: async () => ({ ok: false, error: 'harness-offline' }),
-      text: async () => '',
-      arrayBuffer: async () => new ArrayBuffer(0),
-      clone() { return this; }
+      ok: false, status: 503, statusText: 'Harness offline', headers: { get: () => null },
+      json: async () => ({ ok: false, error: 'harness-offline' }), text: async () => '',
+      arrayBuffer: async () => new ArrayBuffer(0), clone() { return this; }
     });
     window.URL.createObjectURL = () => 'blob:proxyharvest-harness';
     window.URL.revokeObjectURL = () => {};
@@ -69,31 +59,45 @@ const dom = new JSDOM(html, {
       window.localStorage.setItem('ph_strict_real_ping', 'false');
     } catch {}
 
+    const describe = node => {
+      if (!node) return 'null';
+      if (node.nodeType === 3) return '#text';
+      if (node.id) return `#${node.id}`;
+      const tag = String(node.tagName || node.nodeName || 'node').toLowerCase();
+      const cls = typeof node.className === 'string' && node.className.trim()
+        ? `.${node.className.trim().split(/\s+/).slice(0, 3).join('.')}` : '';
+      return `${tag}${cls}`;
+    };
+    const state = { observers: [], idleTracking: false };
     const NativeMutationObserver = window.MutationObserver;
-    const observers = [];
     let nextId = 1;
 
     class InstrumentedMutationObserver {
       constructor(callback) {
         const rec = {
-          id: nextId++,
-          callbacks: 0,
-          records: 0,
-          changedNodes: 0,
-          targets: [],
+          id: nextId++, callbacks: 0, records: 0, changedNodes: 0, targets: [],
+          signatures: new Map(),
           stack: String(new Error().stack || '').split('\n').slice(1, 8).join('\n')
         };
-        observers.push(rec);
+        state.observers.push(rec);
         this._rec = rec;
         this._native = new NativeMutationObserver(records => {
           rec.callbacks += 1;
           rec.records += records.length;
-          for (const r of records) rec.changedNodes += (r.addedNodes?.length || 0) + (r.removedNodes?.length || 0) + (r.type === 'characterData' ? 1 : 0);
+          for (const r of records) {
+            rec.changedNodes += (r.addedNodes?.length || 0) + (r.removedNodes?.length || 0) + (r.type === 'characterData' ? 1 : 0);
+            if (state.idleTracking) {
+              const added = [...(r.addedNodes || [])].slice(0, 4).map(describe).join(',');
+              const removed = [...(r.removedNodes || [])].slice(0, 4).map(describe).join(',');
+              const sig = `${r.type}|${describe(r.target)}|attr=${r.attributeName || ''}|+${added}|-${removed}`;
+              rec.signatures.set(sig, (rec.signatures.get(sig) || 0) + 1);
+            }
+          }
           callback(records, this);
         });
       }
       observe(target, options) {
-        const name = target?.id ? `#${target.id}` : target?.className ? `.${String(target.className).trim().replace(/\s+/g, '.')}` : target?.tagName || 'unknown';
+        const name = describe(target);
         if (!this._rec.targets.includes(name)) this._rec.targets.push(name);
         return this._native.observe(target, options);
       }
@@ -102,7 +106,7 @@ const dom = new JSDOM(html, {
     }
 
     window.MutationObserver = InstrumentedMutationObserver;
-    window.__PH_MUTATION_HARNESS = { observers };
+    window.__PH_MUTATION_HARNESS = state;
   }
 });
 
@@ -113,21 +117,26 @@ await new Promise(resolve => {
   setTimeout(resolve, 5000);
 });
 
-// Allow one-time boot DOM construction, IndexedDB setup, and health checks to settle.
 await sleep(3500);
-const baseline = new Map(dom.window.__PH_MUTATION_HARNESS.observers.map(o => [o.id, { callbacks: o.callbacks, records: o.records, changedNodes: o.changedNodes }]));
+const harness = dom.window.__PH_MUTATION_HARNESS;
+const baseline = new Map(harness.observers.map(o => [o.id, { callbacks: o.callbacks, records: o.records, changedNodes: o.changedNodes }]));
+harness.idleTracking = true;
 await sleep(3500);
+harness.idleTracking = false;
 
-const rows = dom.window.__PH_MUTATION_HARNESS.observers.map(o => {
+const rows = harness.observers.map(o => {
   const b = baseline.get(o.id) || { callbacks: 0, records: 0, changedNodes: 0 };
   const source = o.stack.split('\n').find(line => /proxyharvest\.js|patches\//.test(line))?.trim() || o.stack.split('\n')[0]?.trim() || 'unknown';
+  const topMutations = [...o.signatures.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 12)
+    .map(([signature, count]) => ({ count, signature }));
   return {
-    id: o.id,
-    source,
-    targets: o.targets.join(','),
+    id: o.id, source, targets: o.targets.join(','),
     callbacks: o.callbacks - b.callbacks,
     records: o.records - b.records,
-    changedNodes: o.changedNodes - b.changedNodes
+    changedNodes: o.changedNodes - b.changedNodes,
+    topMutations
   };
 }).sort((a, b) => b.callbacks - a.callbacks || b.records - a.records);
 
