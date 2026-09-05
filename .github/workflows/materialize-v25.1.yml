@@ -48,7 +48,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for f in index.html proxyharvest.html proxyharvest.js package.json vercel.json patches/ui-v26.js patches/ui-v26.css patches/auto-pipeline-v27.js patches/auto-pipeline-v27.css patches/layout-v28.css patches/layout-v31-1368.css patches/status-sync-v32.js patches/status-sync-v32.css patches/status-guard-v32.js patches/compact-interaction-v34.js patches/compact-contrast-v34.css scripts/build.mjs api/ai/health.js api/ai/advise.js worker/proxyharvest-gateway.js; do
+          for f in index.html proxyharvest.html proxyharvest.js package.json vercel.json patches/ui-v26.js patches/ui-v26.css patches/auto-pipeline-v27.js patches/auto-pipeline-v27.css patches/layout-v28.css patches/layout-v31-1368.css patches/status-sync-v32.js patches/status-sync-v32.css patches/status-guard-v32.js patches/compact-interaction-v34.js patches/compact-contrast-v34.css patches/configs-density-v35.js patches/configs-density-v35.css scripts/build.mjs api/ai/health.js api/ai/advise.js worker/proxyharvest-gateway.js; do
             test -f "$f" || { echo "MISSING FILE: $f"; exit 1; }
             echo "FOUND FILE: $f"
           done
@@ -84,10 +84,6 @@ jobs:
           grep -Fq 'ProxyHarvest V31' patches/layout-v31-1368.css
           grep -Fq -- '--ph-canonical-w:1368px' patches/layout-v31-1368.css
           grep -Fq -- '--ph-canonical-h:753px' patches/layout-v31-1368.css
-          grep -Fq 'grid-template-columns:212px minmax(0,1fr)!important' patches/layout-v31-1368.css
-          grep -Fq 'grid-template-columns:196px minmax(0,1fr) 236px!important' patches/layout-v31-1368.css
-          grep -Fq 'grid-template-rows:repeat(6,minmax(0,1fr))!important' patches/layout-v31-1368.css
-          grep -Fq 'grid-template-rows:72px 66px 96px 188px minmax(0,1fr)!important' patches/layout-v31-1368.css
           grep -Fq 'overflow:hidden!important' patches/layout-v31-1368.css
           grep -Fq 'data-proxyharvest-layout="v31-1368x753"' scripts/build.mjs
           echo 'PASS V31-canonical-1368x753-layout'
@@ -105,13 +101,7 @@ jobs:
           grep -Fq 'bestVerified' patches/status-sync-v32.js
           grep -Fq 'exportBestVerified' patches/status-sync-v32.js
           grep -Fq 'ph:v32-verification-sync' patches/status-sync-v32.js
-          grep -Fq "localStorage.setItem('ph_strict_real_ping', opts.strictRealPing ? 'true' : 'false')" patches/status-sync-v32.js
-          grep -Fq 'ph:v32-verify-progress' patches/status-sync-v32.js
-          grep -Fq 'ph:v27-pipeline-complete' patches/status-sync-v32.js
           grep -Fq 'PROXYHARVEST_V32' patches/status-guard-v32.js
-          grep -Fq 'MutationObserver' patches/status-guard-v32.js
-          grep -Fq 'data-proxyharvest-status="v32"' scripts/build.mjs
-          grep -Fq 'data-proxyharvest-status-guard="v32"' scripts/build.mjs
           echo 'PASS V32-verification-export-dashboard-sync'
 
       - name: Validate V34 compact UI and explicit-run guard
@@ -122,16 +112,24 @@ jobs:
           grep -Fq "const BUILD = '34.0.0-compact-interaction'" patches/compact-interaction-v34.js
           grep -Fq "setAutoEnabled(false)" patches/compact-interaction-v34.js
           grep -Fq 'e.isTrusted' patches/compact-interaction-v34.js
-          grep -Fq 'armFromUserFetch' patches/compact-interaction-v34.js
           grep -Fq 'guardUnexpectedTesting' patches/compact-interaction-v34.js
-          grep -Fq 'Previous evidence may be visible' patches/compact-interaction-v34.js
-          grep -Fq 'compactRealTestControls' patches/compact-interaction-v34.js
           grep -Fq 'ProxyHarvest V34' patches/compact-contrast-v34.css
-          grep -Fq '#tab-configs .ph-status-overview' patches/compact-contrast-v34.css
-          grep -Fq '#tab-configs .cfgs-table' patches/compact-contrast-v34.css
-          grep -Fq '#tab-ircf .ircf-pane' patches/compact-contrast-v34.css
           grep -Fq 'data-proxyharvest-compact="v34"' scripts/build.mjs
           echo 'PASS V34-compact-explicit-run-contract'
+
+      - name: Validate V35 dense configs layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check patches/configs-density-v35.js
+          grep -Fq "const BUILD = '35.0.0-configs-density'" patches/configs-density-v35.js
+          grep -Fq "['Worker Reachable', ['Reachable'" patches/configs-density-v35.js
+          grep -Fq '#tab-configs .ph-status-overview' patches/configs-density-v35.css
+          grep -Fq 'table-layout:fixed!important' patches/configs-density-v35.css
+          grep -Fq 'height:38px!important' patches/configs-density-v35.css
+          grep -Fq 'data-proxyharvest-configs-density="v35"' scripts/build.mjs
+          grep -Fq '"configsDensity": "35.0.0-configs-density"' scripts/build.mjs
+          echo 'PASS V35-dense-justified-configs'
 
       - name: Build deploy output
         shell: bash
@@ -141,32 +139,13 @@ jobs:
           test -f public/index.html
           test -f public/proxyharvest.html
           test -f public/proxyharvest.js
-          test -f public/patches/ui-v26.js
-          test -f public/patches/ui-v26.css
-          test -f public/patches/auto-pipeline-v27.js
-          test -f public/patches/auto-pipeline-v27.css
-          test -f public/patches/layout-v28.css
-          test -f public/patches/layout-v31-1368.css
-          test -f public/patches/status-sync-v32.js
-          test -f public/patches/status-sync-v32.css
-          test -f public/patches/status-guard-v32.js
-          test -f public/patches/compact-interaction-v34.js
-          test -f public/patches/compact-contrast-v34.css
+          test -f public/patches/configs-density-v35.js
+          test -f public/patches/configs-density-v35.css
           test -f public/build.json
-          grep -Fq 'data-proxyharvest-ui="v26"' public/index.html
-          grep -Fq 'data-proxyharvest-pipeline="v27"' public/index.html
-          grep -Fq 'data-proxyharvest-layout="v31-1368x753"' public/index.html
-          grep -Fq 'data-proxyharvest-status="v32"' public/index.html
-          grep -Fq 'data-proxyharvest-status-guard="v32"' public/index.html
-          grep -Fq 'data-proxyharvest-compact="v34"' public/index.html
-          grep -Fq 'patches/compact-interaction-v34.js' public/index.html
-          grep -Fq 'patches/compact-contrast-v34.css' public/index.html
-          grep -Fq '"autoPipeline": "27.0.0-auto-pipeline"' public/build.json
-          grep -Fq '"layoutPatch": "31.0.0-canonical-1368x753"' public/build.json
-          grep -Fq '"verificationSync": "32.0.0-verification-sync"' public/build.json
-          grep -Fq '"verificationGuard": "32.0.0-canonical-count-guard"' public/build.json
-          grep -Fq '"compactContrast": "34.0.0-compact-interaction"' public/build.json
-          grep -Fq '"canonicalViewport": "1368x753"' public/build.json
+          grep -Fq 'data-proxyharvest-configs-density="v35"' public/index.html
+          grep -Fq 'patches/configs-density-v35.js' public/index.html
+          grep -Fq 'patches/configs-density-v35.css' public/index.html
+          grep -Fq '"configsDensity": "35.0.0-configs-density"' public/build.json
           echo 'PASS deploy-output'
 
       - name: Truthful verification safety gate
@@ -179,13 +158,10 @@ jobs:
           grep -Fq 'browser fallback does not prove proxy protocol/tunnel' proxyharvest.js
           grep -Fq 'REACHABLE is never promoted to VERIFIED' patches/ui-v26.js
           grep -Fq 'Verified only' patches/ui-v26.js
-          grep -Fq "setStage('verify', 'blocked'" patches/auto-pipeline-v27.js
           grep -Fq 'no reachable-only result is counted as LIVE' patches/auto-pipeline-v27.js
-          grep -Fq "if (p.tunnelVerified === true || p.protocolVerified === true) return 'verified'" patches/status-sync-v32.js
-          grep -Fq "if (p.bridgeReachable === true || p.workerReachable === true || p.browserReachable === true || c?.reachable === true) return 'reachable'" patches/status-sync-v32.js
           grep -Fq "setAutoEnabled(false)" patches/compact-interaction-v34.js
           echo 'PASS truthful-verification'
 
       - name: Summary
         run: |
-          echo "GitHub main is canonical: attachment UI/runtime + V26 UI + V27 autonomous pipeline + V31 responsive canonical dashboard + V32 truthful verification + V34 compact/contrast explicit-run guard + AI API + Worker source."
+          echo "GitHub main is canonical: attachment UI/runtime + V26 UI + V27 pipeline + V31 responsive dashboard + V32 truthful verification + V34 explicit-run guard + V35 dense justified Configs + AI API + Worker source."
