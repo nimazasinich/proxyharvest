@@ -1,0 +1,127 @@
+name: Sync Hugging Face Provider to Vercel
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'api/ai/**'
+      - '.github/workflows/sync-vercel-hf.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: proxyharvest-vercel-hf
+  cancel-in-progress: true
+
+jobs:
+  sync-vercel-hf:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VERCEL_SCOPE: dreammakers-projects-6bd02e6d
+      VERCEL_PROJECT: proxyharvest
+      DEFAULT_HF_MODEL: Qwen/Qwen2.5-7B-Instruct-1M:fastest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate AI provider source
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check api/ai/health.js
+          node --check api/ai/advise.js
+          grep -Fq 'https://router.huggingface.co/v1/chat/completions' api/ai/health.js
+          grep -Fq "mode:'huggingface-provider'" api/ai/health.js
+
+      - name: Detect required secrets
+        id: creds
+        shell: bash
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          set -euo pipefail
+          missing=0
+          if [ -z "${VERCEL_TOKEN:-}" ]; then echo 'VERCEL_TOKEN GitHub Actions secret is missing.'; missing=1; fi
+          if [ -z "${HF_TOKEN:-}" ]; then echo 'HF_TOKEN GitHub Actions secret is missing.'; missing=1; fi
+          if [ "$missing" -eq 0 ]; then
+            echo 'ready=true' >> "$GITHUB_OUTPUT"
+            echo 'Credentials are present; continuing with Vercel environment sync.'
+          else
+            echo 'ready=false' >> "$GITHUB_OUTPUT"
+            echo 'Environment sync is blocked until the missing repository Actions secret(s) are added.'
+          fi
+
+      - name: Link Vercel project
+        if: steps.creds.outputs.ready == 'true'
+        shell: bash
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          npx --yes vercel@latest link --yes \
+            --project "$VERCEL_PROJECT" \
+            --scope "$VERCEL_SCOPE" \
+            --token "$VERCEL_TOKEN"
+
+      - name: Upsert HF_TOKEN in Production and Preview
+        if: steps.creds.outputs.ready == 'true'
+        shell: bash
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          set -euo pipefail
+          for target in production preview; do
+            if npx --yes vercel@latest env ls "$target" --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN" 2>/dev/null | grep -Eq '(^|[[:space:]])HF_TOKEN([[:space:]]|$)'; then
+              printf '%s' "$HF_TOKEN" | npx --yes vercel@latest env update HF_TOKEN "$target" --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN"
+            else
+              printf '%s' "$HF_TOKEN" | npx --yes vercel@latest env add HF_TOKEN "$target" --sensitive --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN"
+            fi
+          done
+
+      - name: Ensure default HF_MODEL
+        if: steps.creds.outputs.ready == 'true'
+        shell: bash
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          for target in production preview; do
+            if ! npx --yes vercel@latest env ls "$target" --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN" 2>/dev/null | grep -Eq '(^|[[:space:]])HF_MODEL([[:space:]]|$)'; then
+              printf '%s' "$DEFAULT_HF_MODEL" | npx --yes vercel@latest env add HF_MODEL "$target" --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN"
+            fi
+          done
+
+      - name: Redeploy Production
+        id: deploy
+        if: steps.creds.outputs.ready == 'true'
+        shell: bash
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          url="$(npx --yes vercel@latest deploy --prod --yes --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN" | tail -n 1)"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Production deployment: $url"
+
+      - name: Verify deep AI health
+        if: steps.creds.outputs.ready == 'true'
+        shell: bash
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          url='${{ steps.deploy.outputs.url }}'
+          body="$(npx --yes vercel@latest curl '/api/ai/health?deep=1' --deployment "$url" --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN")"
+          echo "$body"
+          printf '%s' "$body" | grep -Fq '"mode":"huggingface-provider"'
+          printf '%s' "$body" | grep -Fq '"loaded":true'
+          echo 'PASS: Hugging Face provider is live on the production deployment.'
+
+      - name: Blocker summary
+        if: steps.creds.outputs.ready != 'true'
+        run: |
+          echo 'SKIPPED: add VERCEL_TOKEN and HF_TOKEN as GitHub Actions repository secrets, then re-run this workflow.'
