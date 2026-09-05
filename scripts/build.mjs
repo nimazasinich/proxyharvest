@@ -6,11 +6,13 @@ const assets = {
     { path: '/patches/ui-v26.css', tag: '<link rel="stylesheet" href="/patches/ui-v26.css" data-proxyharvest-ui="v26">' },
     { path: '/patches/auto-pipeline-v27.css', tag: '<link rel="stylesheet" href="/patches/auto-pipeline-v27.css" data-proxyharvest-pipeline="v27">' },
     { path: '/patches/layout-v28.css', tag: '<link rel="stylesheet" href="/patches/layout-v28.css" data-proxyharvest-layout="v29">' },
-    { path: '/patches/layout-v31-1368.css', tag: '<link rel="stylesheet" href="/patches/layout-v31-1368.css" data-proxyharvest-layout="v31-1368x753">' }
+    { path: '/patches/layout-v31-1368.css', tag: '<link rel="stylesheet" href="/patches/layout-v31-1368.css" data-proxyharvest-layout="v31-1368x753">' },
+    { path: '/patches/status-sync-v32.css', tag: '<link rel="stylesheet" href="/patches/status-sync-v32.css" data-proxyharvest-status="v32">' }
   ],
   js: [
     { path: '/patches/ui-v26.js', tag: '<script defer src="/patches/ui-v26.js" data-proxyharvest-ui="v26"></script>' },
-    { path: '/patches/auto-pipeline-v27.js', tag: '<script defer src="/patches/auto-pipeline-v27.js" data-proxyharvest-pipeline="v27"></script>' }
+    { path: '/patches/auto-pipeline-v27.js', tag: '<script defer src="/patches/auto-pipeline-v27.js" data-proxyharvest-pipeline="v27"></script>' },
+    { path: '/patches/status-sync-v32.js', tag: '<script defer src="/patches/status-sync-v32.js" data-proxyharvest-status="v32"></script>' }
   ]
 };
 
@@ -44,6 +46,7 @@ const manifest = {
   uiPatch: '26.0.0-github-main-ui',
   autoPipeline: '27.0.0-auto-pipeline',
   layoutPatch: '31.0.0-canonical-1368x753',
+  verificationSync: '32.0.0-verification-sync',
   canonicalViewport: '1368x753',
   source: 'github-main',
   indexSha256: createHash('sha256').update(index).digest('hex'),
