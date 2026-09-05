@@ -56,9 +56,9 @@ jobs:
           grep -Fq "protocolVerified:ok" bridge/proxyharvest-bridge.mjs
           grep -Fq "tunnelVerified:ok" bridge/proxyharvest-bridge.mjs
           grep -Fq "sing-box-tunnel" bridge/proxyharvest-bridge.mjs
-          grep -Fq "sing-box check" README.md
+          grep -Fq "spawnSync(SING_BOX,['check'" bridge/proxyharvest-bridge.mjs
           grep -Fq "vlessReality:true" bridge/proxyharvest-bridge.mjs
-          grep -Fq "reality={enabled:true" bridge/proxyharvest-bridge.mjs
+          grep -Fq "out.reality={enabled:true" bridge/proxyharvest-bridge.mjs
           grep -Fq "persistent_keepalive_interval" bridge/proxyharvest-bridge.mjs
           grep -Fq "WireGuard verification uses sing-box" README.md
           echo 'PASS V38-real-verifier'
