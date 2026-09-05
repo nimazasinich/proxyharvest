@@ -54,7 +54,7 @@ const manifest = {
   verificationSync: '32.0.0-verification-sync',
   verificationGuard: '32.0.0-canonical-count-guard',
   compactContrast: '34.0.0-compact-interaction',
-  configsDensity: '35.0.0-configs-density',
+  "configsDensity": "35.0.0-configs-density",
   canonicalViewport: '1368x753',
   source: 'github-main',
   indexSha256: createHash('sha256').update(index).digest('hex'),
