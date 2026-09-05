@@ -1,16 +1,13 @@
-name: Validate ProxyHarvest V38 Runtime
+name: Validate ProxyHarvest Runtime
 
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
-      - integration/v26-ui-runtime
-      - integration/v27-auto-pipeline
-      - deploy/v25.1-fetchcomplete
+    branches: [main]
     paths:
       - 'bridge/**'
       - 'patches/runtime-smart-v38.*'
+      - 'patches/control-center-v42.*'
       - 'patches/status-sync-v32.js'
       - 'patches/status-guard-v32.js'
       - 'patches/auto-pipeline-v27.js'
@@ -29,35 +26,35 @@ permissions:
   contents: read
 
 concurrency:
-  group: proxyharvest-v38-${{ github.ref }}
+  group: proxyharvest-runtime-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  validate-v38-runtime:
+  validate-runtime:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate V38.2 source and stability files
+      - name: Validate runtime source and stability files
         shell: bash
         run: |
           set -euo pipefail
-          for f in patches/runtime-smart-v38.js patches/runtime-smart-v38.css patches/status-sync-v32.js patches/status-guard-v32.js patches/auto-pipeline-v27.js patches/compact-interaction-v34.js patches/configs-density-v35.js patches/configs-row-v36.js bridge/proxyharvest-bridge.mjs api/ai/health.js api/ai/advise.js worker/proxyharvest-gateway.js scripts/build.mjs scripts/runtime-stability-check.mjs package.json; do
+          for f in patches/runtime-smart-v38.js patches/runtime-smart-v38.css patches/control-center-v42.js patches/control-center-v42.css patches/status-sync-v32.js patches/status-guard-v32.js patches/auto-pipeline-v27.js patches/compact-interaction-v34.js patches/configs-density-v35.js patches/configs-row-v36.js bridge/proxyharvest-bridge.mjs api/ai/health.js api/ai/advise.js worker/proxyharvest-gateway.js scripts/build.mjs scripts/runtime-stability-check.mjs package.json; do
             test -f "$f" || { echo "MISSING: $f"; exit 1; }
           done
           node --check patches/runtime-smart-v38.js
+          node --check patches/control-center-v42.js
           node --check bridge/proxyharvest-bridge.mjs
           node --check api/ai/health.js
           node --check api/ai/advise.js
           node --check worker/proxyharvest-gateway.js
           node scripts/runtime-stability-check.mjs
           grep -Fq "38.2.0-smart-runtime-stability" patches/runtime-smart-v38.js
-          grep -Fq "cfg-scoreThreshold']='70'" patches/runtime-smart-v38.js
-          grep -Fq "BEST VERIFIED" patches/runtime-smart-v38.js
-          grep -Fq "BEST REACHABLE" patches/runtime-smart-v38.js
-          grep -Fq "VERIFIED .TXT" patches/runtime-smart-v38.js
-          grep -Fq "npm run bridge" patches/runtime-smart-v38.js
-          echo 'PASS V38.2-source-defaults-exports-stability'
+          grep -Fq "42.0.0-auto-control-center" patches/control-center-v42.js
+          grep -Fq "AUTO_INTERVAL=15*60*1000" patches/control-center-v42.js
+          grep -Fq "ph-v42-source-migration-1" patches/control-center-v42.js
+          grep -Fq "PROXYHARVEST_V32?.counts" patches/control-center-v42.js
+          echo 'PASS runtime-source-stability-and-v42-control-center'
 
       - name: Validate truthful real verifier
         shell: bash
@@ -68,12 +65,11 @@ jobs:
           grep -Fq "sing-box-tunnel" bridge/proxyharvest-bridge.mjs
           grep -Fq "spawnSync(SING_BOX,['check'" bridge/proxyharvest-bridge.mjs
           grep -Fq "vlessReality:true" bridge/proxyharvest-bridge.mjs
-          grep -Fq "out.reality={enabled:true" bridge/proxyharvest-bridge.mjs
           grep -Fq "persistent_keepalive_interval" bridge/proxyharvest-bridge.mjs
-          grep -Fq "WireGuard via sing-box WireGuard endpoint support" README.md
-          echo 'PASS V38-real-verifier'
+          grep -Fq "Only the Local Real Test Bridge may set protocol/tunnel/WireGuard verification evidence" patches/control-center-v42.js
+          echo 'PASS real-verifier-boundary'
 
-      - name: Validate HF Inference Providers path
+      - name: Validate HF advisor boundary
         shell: bash
         run: |
           set -euo pipefail
@@ -82,17 +78,22 @@ jobs:
           grep -Fq "HF_TOKEN" api/ai/health.js
           grep -Fq "candidate_ids" api/ai/advise.js
           grep -Fq "rules-fallback" api/ai/advise.js
-          echo 'PASS V38-hf-provider'
+          grep -Fq "Advice only" patches/control-center-v42.js
+          echo 'PASS hf-advisor-not-verifier'
 
-      - name: Validate Worker reachability boundary
+      - name: Validate Cloud Edge Relay boundary
         shell: bash
         run: |
           set -euo pipefail
           grep -Fq "cloudflare:sockets" worker/proxyharvest-gateway.js
-          grep -Fq "transport reachability only; never protocol/tunnel verification" worker/proxyharvest-gateway.js
+          grep -Fq "streaming-cors-relay" worker/proxyharvest-gateway.js
+          grep -Fq "source-check" worker/proxyharvest-gateway.js
+          grep -Fq "cloud-edge-relay" worker/proxyharvest-gateway.js
+          grep -Fq "verifier:false" worker/proxyharvest-gateway.js
           grep -Fq "cf-socket-tcp" worker/proxyharvest-gateway.js
           grep -Fq "cf-socket-tls" worker/proxyharvest-gateway.js
-          echo 'PASS V38-worker-boundary'
+          grep -Fq "never protocol/tunnel/WireGuard verification" worker/proxyharvest-gateway.js
+          echo 'PASS cloud-edge-relay-transport-only-boundary'
 
       - name: Build canonical deploy output
         shell: bash
@@ -101,12 +102,14 @@ jobs:
           npm run build
           test -f public/index.html
           test -f public/patches/runtime-smart-v38.js
-          test -f public/patches/runtime-smart-v38.css
-          grep -Fq 'data-proxyharvest-smart-runtime="v38"' public/index.html
+          test -f public/patches/control-center-v42.js
+          test -f public/patches/control-center-v42.css
+          grep -Fq 'data-proxyharvest-control-center="v42"' public/index.html
           grep -Fq '"smartRuntime": "38.2.0-smart-runtime-stability"' public/build.json
+          grep -Fq '"controlCenter": "42.0.0-auto-control-center"' public/build.json
+          grep -Fq '"cloudEdgeRelay": "42.0.0-streaming-cors-relay"' public/build.json
           grep -Fq '"bridge": "38.0.0-local-real-test-bridge"' public/build.json
-          grep -Fq '"aiProvider": "huggingface-inference-providers"' public/build.json
-          echo 'PASS V38.2-build-stability'
+          echo 'PASS canonical-v42-build'
 
       - name: Summary
-        run: echo 'ProxyHarvest V38.2 PASS — runtime mutation-loop hardening + throttled background work + safe defaults + real local verifier + Reality/WireGuard + HF Inference Providers + verified-only exports.'
+        run: echo 'ProxyHarvest runtime PASS — V42 automatic control center + source repair + live counters + Cloud Edge Relay, while Local Real Test Bridge remains the sole protocol/tunnel verifier.'

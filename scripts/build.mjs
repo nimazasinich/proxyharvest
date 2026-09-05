@@ -12,7 +12,8 @@ const assets = {
     { path: '/patches/configs-density-v35.css', tag: '<link rel="stylesheet" href="/patches/configs-density-v35.css" data-proxyharvest-configs-density="v35">' },
     { path: '/patches/configs-row-v36.css', tag: '<link rel="stylesheet" href="/patches/configs-row-v36.css" data-proxyharvest-configs-row="v36">' },
     { path: '/patches/workspace-balance-v37.css', tag: '<link rel="stylesheet" href="/patches/workspace-balance-v37.css" data-proxyharvest-workspace-balance="v37">' },
-    { path: '/patches/runtime-smart-v38.css', tag: '<link rel="stylesheet" href="/patches/runtime-smart-v38.css" data-proxyharvest-smart-runtime="v38">' }
+    { path: '/patches/runtime-smart-v38.css', tag: '<link rel="stylesheet" href="/patches/runtime-smart-v38.css" data-proxyharvest-smart-runtime="v38">' },
+    { path: '/patches/control-center-v42.css', tag: '<link rel="stylesheet" href="/patches/control-center-v42.css" data-proxyharvest-control-center="v42">' }
   ],
   js: [
     { path: '/patches/ui-v26.js', tag: '<script defer src="/patches/ui-v26.js" data-proxyharvest-ui="v26"></script>' },
@@ -22,7 +23,8 @@ const assets = {
     { path: '/patches/compact-interaction-v34.js', tag: '<script defer src="/patches/compact-interaction-v34.js" data-proxyharvest-compact="v34"></script>' },
     { path: '/patches/configs-density-v35.js', tag: '<script defer src="/patches/configs-density-v35.js" data-proxyharvest-configs-density="v35"></script>' },
     { path: '/patches/configs-row-v36.js', tag: '<script defer src="/patches/configs-row-v36.js" data-proxyharvest-configs-row="v36"></script>' },
-    { path: '/patches/runtime-smart-v38.js', tag: '<script defer src="/patches/runtime-smart-v38.js" data-proxyharvest-smart-runtime="v38"></script>' }
+    { path: '/patches/runtime-smart-v38.js', tag: '<script defer src="/patches/runtime-smart-v38.js" data-proxyharvest-smart-runtime="v38"></script>' },
+    { path: '/patches/control-center-v42.js', tag: '<script defer src="/patches/control-center-v42.js" data-proxyharvest-control-center="v42"></script>' }
   ]
 };
 
@@ -39,6 +41,7 @@ const runtime = await readFile('proxyharvest.js', 'utf8');
 const expected = index.match(/PROXYHARVEST_EXPECTED_BUILD=["']([^"']+)/)?.[1];
 const actual = runtime.match(/PROXYHARVEST_BUILD\s*=\s*["']([^"']+)/)?.[1];
 if (!expected || !actual || expected !== actual) throw new Error(`HTML/JS build mismatch: expected=${expected || 'missing'} actual=${actual || 'missing'}`);
+if (index !== pair) throw new Error('Canonical HTML pair diverged: index.html must be byte-identical to proxyharvest.html');
 
 await rm('public', { recursive: true, force: true });
 await mkdir('public/patches', { recursive: true });
@@ -59,7 +62,9 @@ const manifest = {
   configsRow: '36.0.0-single-line-rows',
   workspaceBalance: '37.0.0-row-splitnet-shared-contrast',
   smartRuntime: '38.2.0-smart-runtime-stability',
+  controlCenter: '42.0.0-auto-control-center',
   bridge: '38.0.0-local-real-test-bridge',
+  cloudEdgeRelay: '42.0.0-streaming-cors-relay',
   aiProvider: 'huggingface-inference-providers',
   canonicalViewport: '1368x753',
   source: 'github-main',
