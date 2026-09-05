@@ -1,4 +1,4 @@
-const DEFAULT_MODEL = 'Qwen/Qwen2.5-7B-Instruct:fastest';
+const DEFAULT_MODEL = 'Qwen/Qwen3-4B-Instruct-2507:fastest';
 const ROUTER = 'https://router.huggingface.co/v1/chat/completions';
 function chooseDeterministic(item) {
   const candidates = Array.isArray(item?.candidates) ? item.candidates : [];

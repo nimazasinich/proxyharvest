@@ -1,7 +1,7 @@
 /* ProxyHarvest V42 — autonomous control center, source repair, live counters, cloud/local runtime health */
 (()=>{
   'use strict';
-  const BUILD='42.0.0-auto-control-center';
+  const BUILD='42.0.1-auto-control-center';
   if(window.PROXYHARVEST_V42?.build===BUILD)return;
 
   const WORKER='https://proxyharvest-gateway.amin-chinisaz-edu.workers.dev';
@@ -138,7 +138,7 @@
     finally{clearTimeout(t)}
   }
   async function workerAudit(){
-    runtime.worker='checking';runtime.edge='checking';render();
+    runtime.worker='checking';runtime.edge='checking';
     try{
       const h=await fetchJson(`${WORKER}/health`,{},7000);
       if(h.ok&&h.data?.ok&&/v42/i.test(String(h.data?.service||''))){runtime.worker='ok';runtime.workerDetail=`${h.data.service} · ${Math.round((h.data.rawFetchLimitBytes||0)/1048576)}MB raw relay`;storeSet('cfg_force_worker','true');const cb=q('cfg-force-worker');if(cb&&!cb.checked){cb.checked=true;cb.dispatchEvent(new Event('change',{bubbles:true}));}}
@@ -151,7 +151,7 @@
     }catch(e){runtime.edge='bad';runtime.edgeDetail=`Relay unavailable: ${String(e?.message||e).slice(0,80)}`;}
   }
   async function bridgeAudit(){
-    runtime.bridge='checking';render();
+    runtime.bridge='checking';
     const configured=(q('localBridgeUrl')?.value||'').trim();
     const candidates=unique([configured,'http://127.0.0.1:8787','http://localhost:8787']);
     for(const base of candidates){
@@ -160,7 +160,7 @@
     runtime.bridge='warn';runtime.bridgeUrl='';runtime.bridgeVerifier=false;runtime.bridgeDetail='Not running locally — use npm run bridge on this PC/VPS';return false;
   }
   async function aiAudit(){
-    runtime.ai='checking';render();
+    runtime.ai='checking';
     let primary=null;
     try{primary=await fetchJson('/api/ai/health?deep=1',{},16000);}catch{}
     if(primary?.ok&&primary.data?.mode==='huggingface-provider'&&primary.data?.loaded){runtime.ai='ok';runtime.aiDetail=`Vercel HF · ${primary.data.model||'Qwen'} · ${primary.data.latency_ms||0}ms`;return;}
@@ -207,13 +207,13 @@
     const targets=full?sources:sources.filter(x=>FALLBACK_SOURCES.some(f=>f.url===x.url)).slice(0,6);
     const use=targets.length?targets:sources.slice(0,6);
     let good=0,checked=0;
-    for(let i=0;i<use.length;i+=5){const batch=use.slice(i,i+5);const out=await Promise.all(batch.map(checkOneSource));for(const r of out){checked++;if(r.good)good++;}runtime.sourceHealthy=good;runtime.sourceChecked=checked;runtime.sourceTotal=sources.length;render();}
+    for(let i=0;i<use.length;i+=5){const batch=use.slice(i,i+5);const out=await Promise.all(batch.map(checkOneSource));for(const r of out){checked++;if(r.good)good++;}runtime.sourceHealthy=good;runtime.sourceChecked=checked;runtime.sourceTotal=sources.length;}
     if(full){runtime.lastFullSource=now();persistSources();}
     return {good,checked,total:sources.length};
   }
 
   async function runAudit(fullSources=false){
-    runtime.lastAudit=now();render();
+    runtime.lastAudit=now();runtime.worker='checking';runtime.edge='checking';runtime.bridge='checking';runtime.ai='checking';render();
     await Promise.allSettled([workerAudit(),bridgeAudit(),aiAudit()]);
     await sourceSweep(fullSources).catch(()=>{});
     runtime.lastAudit=now();render();

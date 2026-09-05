@@ -23,7 +23,7 @@ assert(!v38.includes("mo.observe(document.documentElement,{subtree:true,childLis
 assert(v38.includes("setTimeout(()=>{repairTimer=null;repairUi()},180)"), 'V38 DOM repair is not debounced');
 assert(v38.includes("document.visibilityState==='visible'"), 'V38 periodic work is not visibility-aware');
 
-assert(v42.includes("42.0.0-auto-control-center"), 'V42 control center marker missing');
+assert(v42.includes("42.0.1-auto-control-center"), 'V42 control center marker missing');
 assert(v42.includes("if(el.textContent===n)return false"), 'V42 text writes are not idempotent');
 assert(v42.includes("if(el.getAttribute(k)===n)return false"), 'V42 attribute writes are not idempotent');
 assert(!v42.includes('new MutationObserver'), 'V42 must not add mutation observers');
@@ -52,11 +52,16 @@ const knownHotIntervals = [
 for (const [name, text, rx] of knownHotIntervals) assert(!rx.test(text), `${name}: legacy hot polling remains`);
 
 assert(build.includes("smartRuntime: '38.2.0-smart-runtime-stability'"), 'V38 build manifest marker missing');
-assert(build.includes("controlCenter: '42.0.0-auto-control-center'"), 'V42 build manifest marker missing');
+assert(build.includes("controlCenter: '42.0.1-auto-control-center'"), 'V42 build manifest marker missing');
 assert(build.includes("cloudEdgeRelay: '42.0.0-streaming-cors-relay'"), 'V42 Cloud Edge Relay manifest marker missing');
 const pkg = JSON.parse(pkgRaw);
-assert(pkg.version === '42.0.0-github-main-auto-control-center', 'package version is not V42');
+assert(pkg.version === '42.0.1-github-main-auto-control-center', 'package version is not V42');
 assert(String(pkg.scripts?.check || '').includes('runtime-stability-check.mjs'), 'stability check is not part of npm run check');
 assert(String(pkg.scripts?.check || '').includes('control-center-v42.js'), 'V42 syntax check is not part of npm run check');
 
 console.log('PASS runtime-stability-static: V38 mutation hardening preserved; V42 automation is idempotent, visibility-aware, and verifier-safe');
+
+assert(!v42.includes("runtime.sourceHealthy=good;runtime.sourceChecked=checked;runtime.sourceTotal=sources.length;render();"), 'V42 source sweep renders inside every batch');
+assert(!v42.includes("async function workerAudit(){\n    runtime.worker='checking';runtime.edge='checking';render();"), 'V42 worker audit performs redundant intermediate render');
+assert(!v42.includes("async function bridgeAudit(){\n    runtime.bridge='checking';render();"), 'V42 bridge audit performs redundant intermediate render');
+assert(!v42.includes("async function aiAudit(){\n    runtime.ai='checking';render();"), 'V42 AI audit performs redundant intermediate render');

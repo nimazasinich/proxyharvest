@@ -62,7 +62,7 @@ const manifest = {
   configsRow: '36.0.0-single-line-rows',
   workspaceBalance: '37.0.0-row-splitnet-shared-contrast',
   smartRuntime: '38.2.0-smart-runtime-stability',
-  controlCenter: '42.0.0-auto-control-center',
+  controlCenter: '42.0.1-auto-control-center',
   bridge: '38.0.0-local-real-test-bridge',
   cloudEdgeRelay: '42.0.0-streaming-cors-relay',
   aiProvider: 'huggingface-inference-providers',

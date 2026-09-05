@@ -1,6 +1,6 @@
 {
   "name": "proxyharvest",
-  "version": "42.0.0-github-main-auto-control-center",
+  "version": "42.0.1-github-main-auto-control-center",
   "private": true,
   "type": "module",
   "engines": {

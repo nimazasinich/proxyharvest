@@ -3,7 +3,7 @@ import { connect } from 'cloudflare:sockets';
 const VERSION = 'ProxyHarvest Worker Gateway v42';
 const MAX_JSON_BYTES = 8 * 1024 * 1024;
 const MAX_RAW_BYTES = 24 * 1024 * 1024;
-const DEFAULT_HF_MODEL = 'Qwen/Qwen2.5-7B-Instruct:fastest';
+const DEFAULT_HF_MODEL = 'Qwen/Qwen3-4B-Instruct-2507:fastest';
 const HF_ROUTER = 'https://router.huggingface.co/v1/chat/completions';
 const CORS = {
   'Access-Control-Allow-Origin': '*',

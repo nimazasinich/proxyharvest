@@ -215,7 +215,7 @@ The model is not allowed to invent credentials, UUIDs, keys, hosts, or verificat
 
 ```text
 HF_TOKEN=<your Hugging Face token>
-HF_MODEL=Qwen/Qwen2.5-7B-Instruct:fastest   # optional
+HF_MODEL=Qwen/Qwen3-4B-Instruct-2507:fastest   # optional
 ```
 
 The API uses Hugging Face Inference Providers through:
