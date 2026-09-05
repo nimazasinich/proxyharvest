@@ -1,17 +1,16 @@
 from pathlib import Path
-import re
 
 ROOT = Path(__file__).resolve().parents[1]
 PATH = ROOT / 'patches/compact-interaction-v34.js'
 s = PATH.read_text(encoding='utf-8')
 
-if "const PH_V34_MUTATION_STABILITY = '40.0.0'" in s:
+if "const PH_V34_MUTATION_STABILITY = '40.0.1'" in s:
     print('V34 mutation stability patch already applied')
     raise SystemExit(0)
 
 s = s.replace(
     "  const PH_V34_RUNTIME_STABILITY = '39.0.0';",
-    "  const PH_V34_RUNTIME_STABILITY = '39.0.0';\n  const PH_V34_MUTATION_STABILITY = '40.0.0';",
+    "  const PH_V34_RUNTIME_STABILITY = '39.0.0';\n  const PH_V34_MUTATION_STABILITY = '40.0.1';",
     1,
 )
 
@@ -76,5 +75,26 @@ if s.count(old) != 1:
     raise RuntimeError('V34 normalizeIdleUI anchor mismatch')
 s = s.replace(old, new, 1)
 
+old = '''    const periodic = setInterval(() => {
+      if (document.visibilityState !== 'visible' && window.PH_STATE?.fetchRunning !== true) return;
+      ensureSessionNotice();
+      compactRealTestControls();
+      normalizeIdleUI();
+      syncFetchingState();
+      guardUnexpectedTesting();
+    }, 1200);'''
+new = '''    // Safety polling must never perform routine DOM maintenance. Reparenting or
+    // rewriting UI from this loop wakes every subtree MutationObserver and can
+    // create an observer/render feedback cycle. UI normalization is performed
+    // once during boot; this poll only reacts to actual runtime state changes.
+    const periodic = setInterval(() => {
+      if (document.visibilityState !== 'visible' && window.PH_STATE?.fetchRunning !== true) return;
+      syncFetchingState();
+      guardUnexpectedTesting();
+    }, 1200);'''
+if s.count(old) != 1:
+    raise RuntimeError('V34 periodic block anchor mismatch')
+s = s.replace(old, new, 1)
+
 PATH.write_text(s, encoding='utf-8')
-print('Applied V34 mutation-idempotence patch 40.0.0')
+print('Applied V34 mutation-idempotence patch 40.0.1')
