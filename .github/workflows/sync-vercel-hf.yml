@@ -21,7 +21,7 @@ jobs:
     environment: Production
     timeout-minutes: 15
     env:
-      VERCEL_SCOPE: dreammakers-projects-6bd02e6d
+      VERCEL_SCOPE: team_tgCTfev6a9dYgjXVMHGmvtKl
       VERCEL_PROJECT: proxyharvest
       DEFAULT_HF_MODEL: Qwen/Qwen2.5-7B-Instruct-1M:fastest
     steps:
