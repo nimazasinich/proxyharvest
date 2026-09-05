@@ -6,8 +6,9 @@ on:
     branches: [main]
     paths:
       - 'scripts/apply-runtime-stability-v39.mjs'
+      - 'scripts/apply_runtime_stability_v39.py'
       - 'scripts/runtime-stability-check.mjs'
-      - 'scripts/browser_stability_smoke.py'
+      - 'scripts/browser_stability_smoke.mjs'
       - '.github/workflows/runtime-stability-v39.yml'
 
 permissions:
@@ -48,16 +49,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m pip install --quiet websocket-client
+          npm install --no-save --ignore-scripts --no-audit --no-fund puppeteer-core@24.16.0
           python3 -m http.server 4173 --directory public >/tmp/proxyharvest-http.log 2>&1 &
           HTTP_PID=$!
+          cleanup() { kill "$HTTP_PID" 2>/dev/null || true; }
+          trap cleanup EXIT
           CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           test -n "$CHROME" || { echo 'Chrome/Chromium not found on runner'; exit 1; }
-          "$CHROME" --headless=new --no-sandbox --disable-gpu --disable-background-networking --remote-allow-origins='*' --remote-debugging-port=9222 --user-data-dir=/tmp/proxyharvest-chrome about:blank >/tmp/proxyharvest-chrome.log 2>&1 &
-          CHROME_PID=$!
-          cleanup() { kill "$CHROME_PID" "$HTTP_PID" 2>/dev/null || true; }
-          trap cleanup EXIT
-          timeout 20s python3 scripts/browser_stability_smoke.py
+          PH_CHROME_PATH="$CHROME" timeout 30s node scripts/browser_stability_smoke.mjs
 
       - name: Commit verified runtime fix
         shell: bash
