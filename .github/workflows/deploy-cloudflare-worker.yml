@@ -137,3 +137,5 @@ jobs:
           printf '%s' "$ADVICE" | grep -Fq 'candidate-a'
 
           echo 'PASS: live v42 Worker + raw relay + source health + Cloud Edge Relay + HF repair advisor.'
+
+# Redeploy after provider-supported HF model migration
