@@ -1,0 +1,67 @@
+name: Probe Hugging Face Serverless Chat Model
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/probe-hf-serverless.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    environment: Production
+    timeout-minutes: 8
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN || secrets.huggingfacetoken }}
+    steps:
+      - name: Require HF token
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${HF_TOKEN:-}" || { echo 'HF token missing.'; exit 2; }
+
+      - name: Probe current chat candidates
+        id: probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          candidates=(
+            'openai/gpt-oss-20b:fastest'
+            'Qwen/Qwen3-4B-Instruct-2507:fastest'
+            'Qwen/Qwen3-8B:fastest'
+            'zai-org/GLM-4.5:fastest'
+            'Qwen/Qwen2.5-Coder-32B-Instruct:fastest'
+            'deepseek-ai/DeepSeek-R1:fastest'
+          )
+          selected=''
+          for model in "${candidates[@]}"; do
+            tmp="$(mktemp)"
+            payload="$(jq -cn --arg model "$model" '{model:$model,messages:[{role:"user",content:"Reply with exactly OK."}],max_tokens:4,temperature:0,stream:false}')"
+            code="$(curl -sS --max-time 45 -o "$tmp" -w '%{http_code}' \
+              -H "Authorization: Bearer $HF_TOKEN" \
+              -H 'Content-Type: application/json' \
+              --data "$payload" \
+              'https://router.huggingface.co/v1/chat/completions' || true)"
+            echo "MODEL $model -> HTTP $code"
+            if [[ "$code" == 2* ]]; then
+              text="$(jq -r '.choices[0].message.content // empty' "$tmp" 2>/dev/null || true)"
+              if [ -n "$text" ]; then
+                echo "PASS $model"
+                selected="$model"
+                break
+              fi
+            else
+              jq -r '(.error.message // .error // .message // "provider error")' "$tmp" 2>/dev/null | head -c 500 || true
+              echo
+            fi
+          done
+          test -n "$selected" || { echo 'NO_SERVERLESS_CHAT_MODEL_PASSED'; exit 1; }
+          echo "selected=$selected" >> "$GITHUB_OUTPUT"
+          echo "SELECTED_HF_MODEL=$selected"
+
+      - name: Summary
+        run: echo "PASS serverless HF chat model selected: ${{ steps.probe.outputs.selected }}"
