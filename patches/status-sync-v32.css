@@ -1,0 +1,60 @@
+/* ProxyHarvest V32 — synchronized verification, export and dashboard feedback */
+body[data-premium-shell="1"] .ph-metric{transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease,background .22s ease}
+body[data-premium-shell="1"] .ph-v32-clickable{cursor:pointer}
+body[data-premium-shell="1"] .ph-v32-clickable:focus-visible{outline:3px solid rgba(99,72,239,.2);outline-offset:2px}
+body[data-premium-shell="1"] .ph-v32-has-live{border-color:rgba(14,173,75,.28)!important;background:linear-gradient(180deg,#fff,#f7fff9)!important}
+body[data-premium-shell="1"] .ph-v32-no-live{border-color:#dfe6ef!important}
+body[data-premium-shell="1"] .ph-v32-best-export{position:absolute;right:10px;bottom:9px;height:25px;display:flex;align-items:center;gap:6px;padding:0 8px;border:1px solid #cfe8d9;border-radius:8px;background:#f2fff7;color:#11814d;font:800 7.5px/1 var(--ph-font,Inter,sans-serif);letter-spacing:.04em;cursor:pointer;z-index:4}
+body[data-premium-shell="1"] .ph-v32-best-export b{min-width:18px;height:18px;display:grid;place-items:center;border-radius:999px;background:#16a05b;color:#fff;font-size:8px;line-height:1;margin:0!important}
+body[data-premium-shell="1"] .ph-v32-best-export:disabled{opacity:.46;cursor:not-allowed;filter:grayscale(.2)}
+body[data-premium-shell="1"] .ph-v32-has-live .ph-metric-icon{animation:phV32VerifiedPulse 2.6s ease-in-out infinite}
+@keyframes phV32VerifiedPulse{0%,100%{transform:translateY(0);filter:drop-shadow(0 7px 12px rgba(14,173,75,.12))}50%{transform:translateY(-2px);filter:drop-shadow(0 10px 18px rgba(14,173,75,.28))}}
+
+body[data-premium-shell="1"] #phProcessPanel[data-v32-state="running"]{border-color:rgba(102,70,229,.28)!important;box-shadow:0 16px 38px rgba(85,65,190,.11),inset 0 1px rgba(255,255,255,.9)!important}
+body[data-premium-shell="1"] #phProcessPanel[data-v32-state="done"]{border-color:rgba(14,173,75,.24)!important;background:linear-gradient(145deg,#fff,#f7fff9)!important}
+body[data-premium-shell="1"] #phProcessPanel[data-v32-state="done"] .ph-process-eyebrow{color:#138752!important}
+
+body[data-premium-shell="1"] .ph-route-card.ph-v32-fetch-active,
+body[data-premium-shell="1"] .ph-route-card.ph-v32-route-active,
+body[data-premium-shell="1"] .ph-route-card.ph-v32-verify-active{transform:translateY(-3px)!important;border-color:color-mix(in srgb,var(--route-accent,#6f4cf2) 52%,#dbe3ee)!important;box-shadow:0 18px 42px rgba(42,57,95,.13),0 0 0 2px color-mix(in srgb,var(--route-accent,#6f4cf2) 11%,transparent),0 0 25px color-mix(in srgb,var(--route-accent,#6f4cf2) 18%,transparent)!important}
+body[data-premium-shell="1"] .ph-route-card.ph-v32-fetch-active .ph-route-icon,
+body[data-premium-shell="1"] .ph-route-card.ph-v32-route-active .ph-route-icon,
+body[data-premium-shell="1"] .ph-route-card.ph-v32-verify-active .ph-route-icon{animation:phV32RouteFloat 1.35s ease-in-out infinite}
+body[data-premium-shell="1"] .ph-route-card.ph-v32-fetch-active .ph-route-copy span i,
+body[data-premium-shell="1"] .ph-route-card.ph-v32-route-active .ph-route-copy span i,
+body[data-premium-shell="1"] .ph-route-card.ph-v32-verify-active .ph-route-copy span i{animation:phV32DotPulse 1.15s ease-in-out infinite;background:var(--route-accent,#6f4cf2)!important}
+@keyframes phV32RouteFloat{50%{transform:translateY(-3px) scale(1.03)}}
+@keyframes phV32DotPulse{50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--route-accent,#6f4cf2) 11%,transparent),0 0 18px color-mix(in srgb,var(--route-accent,#6f4cf2) 45%,transparent)}}
+
+body[data-premium-shell="1"] .ph-steps>button{transition:transform .2s ease,opacity .2s ease}
+body[data-premium-shell="1"] .ph-steps>button.ph-v32-step-active{transform:translateY(-2px)}
+body[data-premium-shell="1"] .ph-steps>button.ph-v32-step-active .ph-step-icon{border-color:#b9acf8!important;box-shadow:0 10px 24px rgba(99,72,239,.17),0 0 0 4px rgba(99,72,239,.06)!important;animation:phV32StepPulse 1.3s ease-in-out infinite}
+body[data-premium-shell="1"] .ph-steps>button.ph-v32-step-done .ph-step-icon{border-color:#bde6ce!important;background:linear-gradient(180deg,#fff,#f4fff8)!important}
+body[data-premium-shell="1"] .ph-steps>button.ph-v32-step-done b{color:#11814d!important}
+@keyframes phV32StepPulse{50%{transform:scale(1.045)}}
+
+body[data-premium-shell="1"] #phHarvestBar,body[data-premium-shell="1"] #progFill{transition:width .28s cubic-bezier(.2,.7,.2,1)!important;position:relative;overflow:hidden}
+body[data-premium-shell="1"] #phHarvestBar::after,body[data-premium-shell="1"] #progFill::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.72),transparent);transform:translateX(-120%);animation:phV32BarSweep 1.35s linear infinite}
+@keyframes phV32BarSweep{to{transform:translateX(220%)}}
+
+body[data-premium-shell="1"] #phStatusCards .ph-status-card{transition:transform .2s ease,border-color .2s ease,background .2s ease}
+body[data-premium-shell="1"] #phStatusCards .ph-card-live{border-color:#bce8cf!important;background:linear-gradient(180deg,#fff,#f5fff9)!important}
+body[data-premium-shell="1"] #phStatusCards .ph-card-bridge{border-color:#c6e5f6!important;background:linear-gradient(180deg,#fff,#f5fbff)!important}
+body[data-premium-shell="1"] #phStatusCards .ph-card-dead{border-color:#f0c9d0!important;background:linear-gradient(180deg,#fff,#fff7f8)!important}
+
+@media (max-width:1450px){
+  body[data-premium-shell="1"] .ph-v32-best-export{right:7px;bottom:7px;height:22px;padding:0 6px;font-size:6.7px}
+  body[data-premium-shell="1"] .ph-v32-best-export b{width:16px;height:16px;min-width:16px;font-size:7px}
+}
+@media (prefers-reduced-motion:reduce){
+  body[data-premium-shell="1"] .ph-v32-has-live .ph-metric-icon,
+  body[data-premium-shell="1"] .ph-route-card.ph-v32-fetch-active .ph-route-icon,
+  body[data-premium-shell="1"] .ph-route-card.ph-v32-route-active .ph-route-icon,
+  body[data-premium-shell="1"] .ph-route-card.ph-v32-verify-active .ph-route-icon,
+  body[data-premium-shell="1"] .ph-route-card.ph-v32-fetch-active .ph-route-copy span i,
+  body[data-premium-shell="1"] .ph-route-card.ph-v32-route-active .ph-route-copy span i,
+  body[data-premium-shell="1"] .ph-route-card.ph-v32-verify-active .ph-route-copy span i,
+  body[data-premium-shell="1"] .ph-steps>button.ph-v32-step-active .ph-step-icon,
+  body[data-premium-shell="1"] #phHarvestBar::after,
+  body[data-premium-shell="1"] #progFill::after{animation:none!important}
+}
