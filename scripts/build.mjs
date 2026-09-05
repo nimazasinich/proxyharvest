@@ -10,7 +10,8 @@ const assets = {
     { path: '/patches/status-sync-v32.css', tag: '<link rel="stylesheet" href="/patches/status-sync-v32.css" data-proxyharvest-status="v32">' },
     { path: '/patches/compact-contrast-v34.css', tag: '<link rel="stylesheet" href="/patches/compact-contrast-v34.css" data-proxyharvest-compact="v34">' },
     { path: '/patches/configs-density-v35.css', tag: '<link rel="stylesheet" href="/patches/configs-density-v35.css" data-proxyharvest-configs-density="v35">' },
-    { path: '/patches/configs-row-v36.css', tag: '<link rel="stylesheet" href="/patches/configs-row-v36.css" data-proxyharvest-configs-row="v36">' }
+    { path: '/patches/configs-row-v36.css', tag: '<link rel="stylesheet" href="/patches/configs-row-v36.css" data-proxyharvest-configs-row="v36">' },
+    { path: '/patches/workspace-balance-v37.css', tag: '<link rel="stylesheet" href="/patches/workspace-balance-v37.css" data-proxyharvest-workspace-balance="v37">' }
   ],
   js: [
     { path: '/patches/ui-v26.js', tag: '<script defer src="/patches/ui-v26.js" data-proxyharvest-ui="v26"></script>' },
@@ -58,6 +59,7 @@ const manifest = {
   compactContrast: '34.0.0-compact-interaction',
   configsDensity: '35.0.0-configs-density',
   configsRow: '36.0.0-single-line-rows',
+  workspaceBalance: '37.0.0-row-splitnet-shared-contrast',
   canonicalViewport: '1368x753',
   source: 'github-main',
   indexSha256: createHash('sha256').update(index).digest('hex'),
