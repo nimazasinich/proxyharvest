@@ -34,8 +34,20 @@ jobs:
           node-version: 22
 
       - name: Apply runtime stability patches
+        shell: bash
         run: |
+          set -euo pipefail
           node scripts/apply-runtime-stability-v39.mjs
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('scripts/apply_mutation_loop_v40.py')
+          s = p.read_text(encoding='utf-8')
+          old = '    return rx.sub(replacement, text, count=1)'
+          new = '    return rx.sub(lambda _m: replacement, text, count=1)'
+          if old in s:
+              s = s.replace(old, new, 1)
+              p.write_text(s, encoding='utf-8')
+          PY
           python3 scripts/apply_mutation_loop_v40.py
 
       - name: Install dependencies
@@ -82,7 +94,7 @@ jobs:
           git config user.email "actions@github.com"
           git config user.name "proxyharvest-runtime-stability-bot"
           # Do not stage workflow files here: GitHub App workflow tokens cannot push workflow-file changes.
-          git add proxyharvest.js patches/ui-v26.js patches/runtime-smart-v38.js patches/status-sync-v32.js patches/auto-pipeline-v27.js patches/compact-interaction-v34.js patches/configs-density-v35.js patches/configs-row-v36.js patches/status-guard-v32.js scripts/build.mjs package.json
+          git add proxyharvest.js patches/ui-v26.js patches/runtime-smart-v38.js patches/status-sync-v32.js patches/auto-pipeline-v27.js patches/compact-interaction-v34.js patches/configs-density-v35.js patches/configs-row-v36.js patches/status-guard-v32.js scripts/apply_mutation_loop_v40.py scripts/build.mjs package.json
           if git diff --cached --quiet; then
             echo 'Runtime stability fix already applied.'
             exit 0
