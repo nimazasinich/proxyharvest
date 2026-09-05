@@ -9,6 +9,7 @@ on:
       - 'scripts/apply_runtime_stability_v39.py'
       - 'scripts/apply_mutation_loop_v40.py'
       - 'scripts/runtime-stability-check.mjs'
+      - 'scripts/mutation_writer_harness.mjs'
       - 'scripts/mutation_observer_harness.mjs'
       - 'scripts/browser_stability_smoke.mjs'
       - '.github/workflows/runtime-stability-v39.yml'
@@ -67,11 +68,17 @@ jobs:
       - name: Build canonical output
         run: npm run build
 
-      - name: Instrumented jsdom MutationObserver harness
+      - name: Instrumented jsdom mutation writer trace
         shell: bash
         run: |
           set -euo pipefail
           npm install --no-save --ignore-scripts --no-audit --no-fund jsdom@26.1.0 fake-indexeddb@6.0.1
+          timeout 30s node scripts/mutation_writer_harness.mjs
+
+      - name: Instrumented jsdom MutationObserver harness
+        shell: bash
+        run: |
+          set -euo pipefail
           timeout 30s node scripts/mutation_observer_harness.mjs
 
       - name: Headless browser event-loop smoke
