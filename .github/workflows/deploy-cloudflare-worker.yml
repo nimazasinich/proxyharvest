@@ -36,6 +36,7 @@ jobs:
           grep -Fq "'/ai/health'" worker/proxyharvest-gateway.js
           grep -Fq "'/ai/advise'" worker/proxyharvest-gateway.js
           grep -Fq "https://router.huggingface.co/v1/chat/completions" worker/proxyharvest-gateway.js
+          grep -Fq "Qwen/Qwen3-4B-Instruct-2507:fastest" worker/proxyharvest-gateway.js
           grep -Fq "raw-tcp-tls" worker/proxyharvest-gateway.js
           grep -Fq "verifier:false" worker/proxyharvest-gateway.js
           grep -Fq "A repair is never verification" worker/proxyharvest-gateway.js
@@ -43,7 +44,7 @@ jobs:
             echo "Legacy fixed allowlist detected; refusing deployment."
             exit 1
           fi
-          echo 'PASS: v42 gateway + HF repair-advisor source contract.'
+          echo 'PASS: v42 gateway + Qwen3 HF repair-advisor source contract.'
 
       - name: Require Cloudflare and Hugging Face secrets
         shell: bash
@@ -64,13 +65,8 @@ jobs:
         run: |
           set -euo pipefail
           EXTRA=()
-          if [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
-            EXTRA+=(--account-id "$CLOUDFLARE_ACCOUNT_ID")
-          fi
-          npx --yes wrangler@latest deploy worker/proxyharvest-gateway.js \
-            --name proxyharvest-gateway \
-            --compatibility-date 2026-09-05 \
-            "${EXTRA[@]}"
+          if [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then EXTRA+=(--account-id "$CLOUDFLARE_ACCOUNT_ID"); fi
+          npx --yes wrangler@latest deploy worker/proxyharvest-gateway.js --name proxyharvest-gateway --compatibility-date 2026-09-05 "${EXTRA[@]}"
 
       - name: Configure HF_TOKEN as Worker secret
         shell: bash
@@ -81,15 +77,11 @@ jobs:
         run: |
           set -euo pipefail
           EXTRA=()
-          if [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
-            EXTRA+=(--account-id "$CLOUDFLARE_ACCOUNT_ID")
-          fi
-          printf '%s' "$HF_TOKEN" | npx --yes wrangler@latest secret put HF_TOKEN \
-            --name proxyharvest-gateway \
-            "${EXTRA[@]}"
+          if [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then EXTRA+=(--account-id "$CLOUDFLARE_ACCOUNT_ID"); fi
+          printf '%s' "$HF_TOKEN" | npx --yes wrangler@latest secret put HF_TOKEN --name proxyharvest-gateway "${EXTRA[@]}"
           echo 'PASS: HF_TOKEN stored as Cloudflare Worker secret.'
 
-      - name: Verify live Worker, relay and HF advisor
+      - name: Verify live Worker, relay and Qwen3 HF advisor
         shell: bash
         run: |
           set -euo pipefail
@@ -100,10 +92,9 @@ jobs:
             if printf '%s' "$BODY" | grep -Fq 'ProxyHarvest Worker Gateway v42' \
               && printf '%s' "$BODY" | grep -Fq 'streaming-cors-relay' \
               && printf '%s' "$BODY" | grep -Fq 'raw-tcp-tls' \
-              && printf '%s' "$BODY" | grep -Fq '"configured":true'; then
-              break
-            fi
-            [ "$attempt" -lt 6 ] || { echo 'Live Worker did not report expected v42/HF-secret health.'; exit 1; }
+              && printf '%s' "$BODY" | grep -Fq '"configured":true' \
+              && printf '%s' "$BODY" | grep -Fq 'Qwen/Qwen3-4B-Instruct-2507:fastest'; then break; fi
+            [ "$attempt" -lt 6 ] || { echo 'Live Worker did not report expected v42/Qwen3/HF-secret health.'; exit 1; }
             sleep 5
           done
 
@@ -121,21 +112,16 @@ jobs:
           RAW_FILE="$(mktemp)"
           curl -fsS --max-time 20 "$BASE/?url=$ENCODED" -o "$RAW_FILE"
           test -s "$RAW_FILE"
-          echo "Raw relay sample: $(head -c 80 "$RAW_FILE" | tr '\n' ' ')"
 
-          AI="$(curl -fsS --max-time 35 "$BASE/ai/health?deep=1")"
+          AI="$(curl -fsS --max-time 45 "$BASE/ai/health?deep=1")"
           echo "$AI"
           printf '%s' "$AI" | grep -Fq '"mode":"huggingface-provider"'
           printf '%s' "$AI" | grep -Fq '"loaded":true'
+          printf '%s' "$AI" | grep -Fq 'Qwen/Qwen3-4B-Instruct-2507:fastest'
 
-          ADVICE="$(curl -fsS --max-time 35 -X POST -H 'Content-Type: application/json' \
-            --data '{"items":[{"index":0,"issues":["sni"],"type":"vless","candidates":[{"id":"candidate-a","summary":"bounded reversible candidate","rule_confidence":72}]}]}' \
-            "$BASE/ai/advise")"
+          ADVICE="$(curl -fsS --max-time 45 -X POST -H 'Content-Type: application/json' --data '{"items":[{"index":0,"issues":["sni"],"type":"vless","candidates":[{"id":"candidate-a","summary":"bounded reversible candidate","rule_confidence":72}]}]}' "$BASE/ai/advise")"
           echo "$ADVICE"
           printf '%s' "$ADVICE" | grep -Fq '"ok":true'
           printf '%s' "$ADVICE" | grep -Fq '"verification":false'
           printf '%s' "$ADVICE" | grep -Fq 'candidate-a'
-
-          echo 'PASS: live v42 Worker + raw relay + source health + Cloud Edge Relay + HF repair advisor.'
-
-# Redeploy after provider-supported HF model migration
+          echo 'PASS: live v42 Worker + relay + source health + Cloud Edge Relay + Qwen3 HF repair advisor.'
