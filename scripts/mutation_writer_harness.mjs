@@ -56,10 +56,11 @@ const dom = new JSDOM(html, {
     const record = (kind, target, value) => {
       if (!state.enabled) return;
       const id = target?.id ? `#${target.id}` : target?.className ? `.${String(target.className).trim().replace(/\s+/g, '.')}` : target?.nodeName || 'unknown';
-      const stack = String(new Error().stack || '').split('\n').slice(2, 10);
-      const source = stack.find(line => /http:\/\/proxyharvest\.local\/(proxyharvest\.js|patches\/)/.test(line))?.trim() || stack[0]?.trim() || 'unknown';
+      const stack = String(new Error().stack || '').split('\n').slice(2, 25);
+      const sourceLines = stack.filter(line => /http:\/\/proxyharvest\.local\/(proxyharvest\.js|patches\/)/.test(line)).map(line => line.trim());
+      const source = sourceLines[0] || stack[0]?.trim() || 'unknown';
       const key = `${kind}|${id}|${source}`;
-      const item = state.writes.get(key) || { kind, target: id, source, count: 0, samples: [] };
+      const item = state.writes.get(key) || { kind, target: id, source, sourceStack: sourceLines.slice(0, 8), count: 0, samples: [] };
       item.count += 1;
       if (item.samples.length < 3) item.samples.push(String(value ?? '').slice(0, 180));
       state.writes.set(key, item);
