@@ -1,0 +1,304 @@
+/* ProxyHarvest V37 — row-based SplitNet + balanced workspace contrast */
+:root{
+  --ph37-ink:#1c2b43;
+  --ph37-ink-2:#31435f;
+  --ph37-muted:#667892;
+  --ph37-line:#dbe4ef;
+  --ph37-line-strong:#cfd9e7;
+  --ph37-panel:#ffffff;
+  --ph37-panel-alt:#f8fbff;
+  --ph37-purple:#6847e8;
+  --ph37-blue:#1677c8;
+  --ph37-cyan:#0785a8;
+  --ph37-green:#0d8652;
+  --ph37-orange:#b85f10;
+  --ph37-red:#c44859;
+  --ph37-shadow:0 7px 22px rgba(36,52,84,.055);
+}
+
+/* Shared workspace visual system: consistent contrast, spacing and button treatment. */
+#tab-splitnet,#tab-ircf,#tab-sources,#tab-wireguard,#tab-ai-healer,#tab-settings,#tab-infrastructure{
+  color:var(--ph37-ink)!important;
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif!important;
+}
+#tab-splitnet .splitnet-bar,#tab-ircf .ircf-bar,#tab-sources .srcs-bar,#tab-wireguard .wg-section-bar,
+#tab-ai-healer .ph25-hf-panel,#tab-settings .setting-group,#tab-settings .settings-card,
+#tab-infrastructure .infra-card,#tab-infrastructure .settings-card{
+  background:var(--ph37-panel)!important;
+  border:1px solid var(--ph37-line)!important;
+  color:var(--ph37-ink)!important;
+  box-shadow:var(--ph37-shadow)!important;
+}
+#tab-splitnet .btn,#tab-ircf .btn,#tab-sources .btn,#tab-wireguard .btn,#tab-ai-healer .btn,#tab-settings .btn,#tab-infrastructure .btn{
+  min-height:30px!important;
+  border-radius:8px!important;
+  padding:0 10px!important;
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif!important;
+  font-size:9px!important;
+  font-weight:800!important;
+  line-height:1!important;
+  letter-spacing:.015em!important;
+  box-shadow:none!important;
+  white-space:nowrap!important;
+}
+#tab-splitnet .btn-ghost,#tab-ircf .btn-ghost,#tab-sources .btn-ghost,#tab-wireguard .btn-ghost,#tab-ai-healer .btn-ghost,#tab-settings .btn-ghost,#tab-infrastructure .btn-ghost{
+  background:#fff!important;color:#394b67!important;border-color:var(--ph37-line-strong)!important;
+}
+#tab-splitnet .btn-cyan,#tab-ircf .btn-cyan,#tab-sources .btn-cyan,#tab-wireguard .btn-cyan,#tab-ai-healer .btn-cyan,#tab-settings .btn-cyan,#tab-infrastructure .btn-cyan{
+  background:#eef9fd!important;color:#086f92!important;border-color:#b9deea!important;
+}
+#tab-splitnet .btn-teal,#tab-ircf .btn-teal,#tab-sources .btn-teal,#tab-wireguard .btn-teal,#tab-ai-healer .btn-teal,#tab-settings .btn-teal,#tab-infrastructure .btn-teal{
+  background:#edf9f7!important;color:#0b7569!important;border-color:#b9dfd9!important;
+}
+#tab-splitnet .btn-green,#tab-ircf .btn-green,#tab-sources .btn-green,#tab-wireguard .btn-green,#tab-ai-healer .btn-green,#tab-settings .btn-green,#tab-infrastructure .btn-green{
+  background:#eef9f3!important;color:#0b7648!important;border-color:#bae0ca!important;
+}
+#tab-splitnet .btn-orange,#tab-ircf .btn-orange,#tab-sources .btn-orange,#tab-wireguard .btn-orange,#tab-ai-healer .btn-orange,#tab-settings .btn-orange,#tab-infrastructure .btn-orange{
+  background:#fff5eb!important;color:#9d4e0b!important;border-color:#f0cfad!important;
+}
+#tab-splitnet .btn-purple,#tab-ircf .btn-purple,#tab-sources .btn-purple,#tab-wireguard .btn-purple,#tab-ai-healer .btn-purple,#tab-settings .btn-purple,#tab-infrastructure .btn-purple{
+  background:var(--ph37-purple)!important;color:#fff!important;border-color:var(--ph37-purple)!important;
+}
+#tab-splitnet .btn-red,#tab-ircf .btn-red,#tab-sources .btn-red,#tab-wireguard .btn-red,#tab-ai-healer .btn-red,#tab-settings .btn-red,#tab-infrastructure .btn-red{
+  background:#fff2f4!important;color:#b83e50!important;border-color:#efc4cc!important;
+}
+
+/* Sidebar: all rows use the same rhythm and active-state contrast, including SplitNet (third row). */
+.ph-nav-item,.nav-item{
+  min-height:42px!important;
+  padding:0 12px!important;
+  gap:11px!important;
+  border-radius:10px!important;
+  font-size:12px!important;
+  font-weight:650!important;
+  color:#31445f!important;
+}
+.ph-nav-item svg,.nav-item svg{width:18px!important;height:18px!important;color:#8fa5bd!important;stroke:currentColor!important}
+.ph-nav-item .ph-nav-count,.nav-item .ph-nav-count{
+  margin-left:auto!important;
+  min-width:28px!important;
+  height:22px!important;
+  padding:0 7px!important;
+  border-radius:999px!important;
+  background:#edf3f8!important;
+  border:1px solid #d9e4ee!important;
+  color:#54708b!important;
+  font-size:9px!important;
+  font-weight:800!important;
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+}
+.ph-nav-item.active,.nav-item.active{
+  background:linear-gradient(90deg,#f0ebff 0%,#f6f3ff 100%)!important;
+  color:#5d39d8!important;
+  box-shadow:inset 3px 0 0 #7655ee!important;
+}
+.ph-nav-item.active svg,.nav-item.active svg{color:#6948e6!important}
+.ph-nav-item.active .ph-nav-count,.nav-item.active .ph-nav-count{background:#fff!important;color:#6644dd!important;border-color:#d7ccff!important}
+
+/* SplitNet top section: compact, justified, and visually quiet. */
+#tab-splitnet{padding:8px 10px 10px!important;gap:0!important}
+#tab-splitnet .phv26-page-summary{
+  min-height:48px!important;
+  margin:0 0 6px!important;
+  padding:7px 10px!important;
+  border:1px solid var(--ph37-line)!important;
+  border-radius:11px!important;
+  background:#fff!important;
+  box-shadow:none!important;
+}
+#tab-splitnet .phv26-page-summary b{font-size:11px!important;color:var(--ph37-ink)!important}
+#tab-splitnet .phv26-page-summary span{font-size:8.5px!important;color:var(--ph37-muted)!important}
+#tab-splitnet .splitnet-bar{
+  min-height:36px!important;
+  height:36px!important;
+  padding:4px 10px!important;
+  margin:0!important;
+  border-radius:10px 10px 0 0!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:8px!important;
+  box-shadow:none!important;
+}
+#tab-splitnet .splitnet-title{font-size:11px!important;font-weight:850!important;color:var(--ph37-ink)!important}
+#tab-splitnet .splitnet-status,#tab-splitnet #splitnetFilteredCount{font-size:8.5px!important;color:var(--ph37-muted)!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+#tab-splitnet>div:nth-child(2){
+  min-height:42px!important;
+  padding:5px 10px!important;
+  gap:6px!important;
+  flex-wrap:nowrap!important;
+  background:#fff!important;
+  border:1px solid var(--ph37-line)!important;
+  border-top:0!important;
+  border-radius:0 0 10px 10px!important;
+  box-shadow:none!important;
+  overflow-x:auto!important;
+}
+#tab-splitnet>div:nth-child(2) .fsel,#tab-splitnet>div:nth-child(2) .search-input{
+  height:30px!important;min-height:30px!important;border-radius:8px!important;background:#fbfdff!important;border:1px solid var(--ph37-line)!important;color:var(--ph37-ink)!important;font-size:9.5px!important;
+}
+#tab-splitnet>div:nth-child(2) .fsel{min-width:120px!important}
+#tab-splitnet>div:nth-child(2)>div[style*="max-width:200px"]{max-width:235px!important;min-width:180px!important}
+#tab-splitnet>div:nth-child(3){
+  min-height:28px!important;
+  padding:5px 10px!important;
+  gap:12px!important;
+  background:#f7fbfd!important;
+  color:#63768e!important;
+  border:1px solid #dce8ef!important;
+  border-radius:9px!important;
+  margin:6px 0!important;
+  font-size:8px!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+}
+#tab-splitnet>div:nth-child(3)>span:last-child{overflow:hidden!important;text-overflow:ellipsis!important}
+
+/* SplitNet configs: real rows instead of tall cards. */
+#tab-splitnet .splitnet-grid{
+  display:flex!important;
+  flex-direction:column!important;
+  gap:6px!important;
+  padding:0!important;
+  overflow:visible!important;
+  align-content:initial!important;
+}
+#tab-splitnet .splitnet-card{
+  display:grid!important;
+  grid-template-columns:150px minmax(210px,1fr) 86px 205px 245px!important;
+  align-items:center!important;
+  gap:10px!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:58px!important;
+  padding:7px 10px!important;
+  margin:0!important;
+  border:1px solid var(--ph37-line)!important;
+  border-radius:11px!important;
+  background:#fff!important;
+  box-shadow:0 3px 10px rgba(35,52,84,.035)!important;
+  transform:none!important;
+  overflow:hidden!important;
+}
+#tab-splitnet .splitnet-card:nth-child(even){background:var(--ph37-panel-alt)!important}
+#tab-splitnet .splitnet-card:hover{transform:none!important;background:#f3f8ff!important;border-color:#c9d9eb!important;box-shadow:0 5px 14px rgba(35,52,84,.06)!important}
+#tab-splitnet .splitnet-card::before{display:none!important}
+#tab-splitnet .splitnet-card-hdr{
+  grid-column:1!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  flex-wrap:nowrap!important;
+  gap:5px!important;
+  min-width:0!important;
+  min-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  overflow:hidden!important;
+}
+#tab-splitnet .splitnet-card-hdr>span:last-child{margin-left:auto!important;flex:0 0 auto!important;font-size:8px!important;color:#7b8ca2!important}
+#tab-splitnet .splitnet-card .pbadge{
+  min-width:54px!important;height:22px!important;padding:0 7px!important;border-radius:7px!important;font-size:8.5px!important;font-weight:850!important;line-height:1!important;white-space:nowrap!important;
+}
+#tab-splitnet .splitnet-card .conn-badge{
+  max-width:62px!important;height:22px!important;padding:0 6px!important;border-radius:7px!important;font-size:8px!important;font-weight:800!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;
+}
+#tab-splitnet .splitnet-host{
+  grid-column:2!important;
+  min-width:0!important;
+  margin:0!important;
+  padding:0!important;
+  font:800 11px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;
+  color:#263a57!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+#tab-splitnet .splitnet-score-bar{
+  grid-column:3!important;
+  width:100%!important;
+  height:6px!important;
+  margin:0!important;
+  border-radius:999px!important;
+  background:#e7edf5!important;
+  overflow:hidden!important;
+}
+#tab-splitnet .splitnet-score-fill{height:100%!important;border-radius:999px!important;background:linear-gradient(90deg,#16a6c8,#49c999)!important}
+#tab-splitnet .splitnet-meta{
+  grid-column:4!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  flex-wrap:nowrap!important;
+  gap:7px!important;
+  min-width:0!important;
+  margin:0!important;
+  padding:0!important;
+  background:transparent!important;
+  color:var(--ph37-muted)!important;
+  font-size:8.5px!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+}
+#tab-splitnet .splitnet-meta span{white-space:nowrap!important}
+#tab-splitnet .splitnet-actions{
+  grid-column:5!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  flex-wrap:nowrap!important;
+  gap:5px!important;
+  min-width:0!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  overflow:hidden!important;
+}
+#tab-splitnet .splitnet-actions .btn{
+  height:28px!important;min-height:28px!important;padding:0 8px!important;border-radius:8px!important;font-size:8px!important;gap:4px!important;
+}
+#tab-splitnet .splitnet-actions .btn:nth-last-child(-n+2){width:28px!important;min-width:28px!important;padding:0!important;justify-content:center!important}
+#tab-splitnet .splitnet-actions .btn svg{width:11px!important;height:11px!important}
+
+/* Shared page cards/panes: clearer text and less washed-out surfaces. */
+#tab-ircf .ircf-infobox,#tab-ircf .ircf-pane,#tab-sources .src-card,#tab-wireguard .wg-card,
+#tab-ai-healer .ph25-engine-matrix,#tab-settings .perf-tip,#tab-infrastructure .phv26-infra-status{
+  background:#fff!important;
+  border-color:var(--ph37-line)!important;
+  color:var(--ph37-ink)!important;
+  box-shadow:var(--ph37-shadow)!important;
+}
+#tab-ircf .ircf-pane-hdr,#tab-sources .src-card-header,#tab-wireguard .wg-card-hdr,#tab-ai-healer .ph25-engine-matrix .head{
+  background:#f6f9fd!important;
+  color:var(--ph37-ink-2)!important;
+  border-color:var(--ph37-line)!important;
+}
+#tab-ircf .ircf-pane-title,#tab-sources .src-card-name,#tab-wireguard .wg-card-name,
+#tab-settings h3,#tab-infrastructure h3,#tab-ai-healer strong{color:#253a59!important;font-weight:800!important}
+#tab-ircf .ircf-pane-count,#tab-sources .src-meta,#tab-wireguard .wg-field-label,#tab-wireguard .wg-field-value,
+#tab-settings .setting-desc,#tab-infrastructure .setting-desc{color:var(--ph37-muted)!important}
+
+/* Keep native scrollbars from V36 across every workspace. */
+#tab-splitnet *,#tab-ircf *,#tab-sources *,#tab-wireguard *,#tab-ai-healer *,#tab-settings *,#tab-infrastructure *{
+  scrollbar-color:auto!important;
+  scrollbar-width:auto!important;
+}
+
+@media (max-width:1360px){
+  #tab-splitnet .splitnet-card{grid-template-columns:135px minmax(180px,1fr) 74px 175px 220px!important;gap:8px!important}
+  #tab-splitnet .splitnet-actions .btn{padding:0 6px!important;font-size:7.5px!important}
+}
+@media (max-width:1120px){
+  #tab-splitnet .splitnet-card{grid-template-columns:120px minmax(180px,1fr) 72px 150px 190px!important}
+  #tab-splitnet .splitnet-actions .btn{width:28px!important;min-width:28px!important;padding:0!important;font-size:0!important;justify-content:center!important}
+  #tab-splitnet .splitnet-actions .btn svg{margin:0!important}
+}
+@media (max-width:900px){
+  #tab-splitnet>div:nth-child(2){flex-wrap:wrap!important;overflow:visible!important}
+  #tab-splitnet .splitnet-card{grid-template-columns:120px minmax(180px,1fr) 90px!important;grid-template-rows:auto auto!important;min-height:84px!important}
+  #tab-splitnet .splitnet-card-hdr{grid-column:1!important;grid-row:1!important}
+  #tab-splitnet .splitnet-host{grid-column:2!important;grid-row:1!important}
+  #tab-splitnet .splitnet-score-bar{grid-column:3!important;grid-row:1!important}
+  #tab-splitnet .splitnet-meta{grid-column:1 / 3!important;grid-row:2!important}
+  #tab-splitnet .splitnet-actions{grid-column:3!important;grid-row:2!important}
+}
