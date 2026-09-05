@@ -48,7 +48,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for f in index.html proxyharvest.html proxyharvest.js package.json vercel.json patches/ui-v26.js patches/ui-v26.css patches/auto-pipeline-v27.js patches/auto-pipeline-v27.css patches/layout-v28.css patches/layout-v31-1368.css patches/status-sync-v32.js patches/status-sync-v32.css patches/status-guard-v32.js scripts/build.mjs api/ai/health.js api/ai/advise.js worker/proxyharvest-gateway.js; do
+          for f in index.html proxyharvest.html proxyharvest.js package.json vercel.json patches/ui-v26.js patches/ui-v26.css patches/auto-pipeline-v27.js patches/auto-pipeline-v27.css patches/layout-v28.css patches/layout-v31-1368.css patches/status-sync-v32.js patches/status-sync-v32.css patches/status-guard-v32.js patches/compact-interaction-v34.js patches/compact-contrast-v34.css scripts/build.mjs api/ai/health.js api/ai/advise.js worker/proxyharvest-gateway.js; do
             test -f "$f" || { echo "MISSING FILE: $f"; exit 1; }
             echo "FOUND FILE: $f"
           done
@@ -114,6 +114,25 @@ jobs:
           grep -Fq 'data-proxyharvest-status-guard="v32"' scripts/build.mjs
           echo 'PASS V32-verification-export-dashboard-sync'
 
+      - name: Validate V34 compact UI and explicit-run guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check patches/compact-interaction-v34.js
+          grep -Fq "const BUILD = '34.0.0-compact-interaction'" patches/compact-interaction-v34.js
+          grep -Fq "setAutoEnabled(false)" patches/compact-interaction-v34.js
+          grep -Fq 'e.isTrusted' patches/compact-interaction-v34.js
+          grep -Fq 'armFromUserFetch' patches/compact-interaction-v34.js
+          grep -Fq 'guardUnexpectedTesting' patches/compact-interaction-v34.js
+          grep -Fq 'Previous evidence may be visible' patches/compact-interaction-v34.js
+          grep -Fq 'compactRealTestControls' patches/compact-interaction-v34.js
+          grep -Fq 'ProxyHarvest V34' patches/compact-contrast-v34.css
+          grep -Fq '#tab-configs .ph-status-overview' patches/compact-contrast-v34.css
+          grep -Fq '#tab-configs .cfgs-table' patches/compact-contrast-v34.css
+          grep -Fq '#tab-ircf .ircf-pane' patches/compact-contrast-v34.css
+          grep -Fq 'data-proxyharvest-compact="v34"' scripts/build.mjs
+          echo 'PASS V34-compact-explicit-run-contract'
+
       - name: Build deploy output
         shell: bash
         run: |
@@ -131,20 +150,22 @@ jobs:
           test -f public/patches/status-sync-v32.js
           test -f public/patches/status-sync-v32.css
           test -f public/patches/status-guard-v32.js
+          test -f public/patches/compact-interaction-v34.js
+          test -f public/patches/compact-contrast-v34.css
           test -f public/build.json
           grep -Fq 'data-proxyharvest-ui="v26"' public/index.html
           grep -Fq 'data-proxyharvest-pipeline="v27"' public/index.html
-          grep -Fq 'data-proxyharvest-layout="v29"' public/index.html
           grep -Fq 'data-proxyharvest-layout="v31-1368x753"' public/index.html
           grep -Fq 'data-proxyharvest-status="v32"' public/index.html
           grep -Fq 'data-proxyharvest-status-guard="v32"' public/index.html
-          grep -Fq 'patches/status-sync-v32.js' public/index.html
-          grep -Fq 'patches/status-sync-v32.css' public/index.html
-          grep -Fq 'patches/status-guard-v32.js' public/index.html
+          grep -Fq 'data-proxyharvest-compact="v34"' public/index.html
+          grep -Fq 'patches/compact-interaction-v34.js' public/index.html
+          grep -Fq 'patches/compact-contrast-v34.css' public/index.html
           grep -Fq '"autoPipeline": "27.0.0-auto-pipeline"' public/build.json
           grep -Fq '"layoutPatch": "31.0.0-canonical-1368x753"' public/build.json
           grep -Fq '"verificationSync": "32.0.0-verification-sync"' public/build.json
           grep -Fq '"verificationGuard": "32.0.0-canonical-count-guard"' public/build.json
+          grep -Fq '"compactContrast": "34.0.0-compact-interaction"' public/build.json
           grep -Fq '"canonicalViewport": "1368x753"' public/build.json
           echo 'PASS deploy-output'
 
@@ -162,8 +183,9 @@ jobs:
           grep -Fq 'no reachable-only result is counted as LIVE' patches/auto-pipeline-v27.js
           grep -Fq "if (p.tunnelVerified === true || p.protocolVerified === true) return 'verified'" patches/status-sync-v32.js
           grep -Fq "if (p.bridgeReachable === true || p.workerReachable === true || p.browserReachable === true || c?.reachable === true) return 'reachable'" patches/status-sync-v32.js
+          grep -Fq "setAutoEnabled(false)" patches/compact-interaction-v34.js
           echo 'PASS truthful-verification'
 
       - name: Summary
         run: |
-          echo "GitHub main is canonical: attachment UI/runtime + V26 UI + V27 autonomous pipeline + V31 canonical 1368x753 dashboard + V32 verification sync/best export/count guard + AI API + Worker source."
+          echo "GitHub main is canonical: attachment UI/runtime + V26 UI + V27 autonomous pipeline + V31 responsive canonical dashboard + V32 truthful verification + V34 compact/contrast explicit-run guard + AI API + Worker source."
