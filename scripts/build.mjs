@@ -12,7 +12,8 @@ const assets = {
   js: [
     { path: '/patches/ui-v26.js', tag: '<script defer src="/patches/ui-v26.js" data-proxyharvest-ui="v26"></script>' },
     { path: '/patches/auto-pipeline-v27.js', tag: '<script defer src="/patches/auto-pipeline-v27.js" data-proxyharvest-pipeline="v27"></script>' },
-    { path: '/patches/status-sync-v32.js', tag: '<script defer src="/patches/status-sync-v32.js" data-proxyharvest-status="v32"></script>' }
+    { path: '/patches/status-sync-v32.js', tag: '<script defer src="/patches/status-sync-v32.js" data-proxyharvest-status="v32"></script>' },
+    { path: '/patches/status-guard-v32.js', tag: '<script defer src="/patches/status-guard-v32.js" data-proxyharvest-status-guard="v32"></script>' }
   ]
 };
 
@@ -47,6 +48,7 @@ const manifest = {
   autoPipeline: '27.0.0-auto-pipeline',
   layoutPatch: '31.0.0-canonical-1368x753',
   verificationSync: '32.0.0-verification-sync',
+  verificationGuard: '32.0.0-canonical-count-guard',
   canonicalViewport: '1368x753',
   source: 'github-main',
   indexSha256: createHash('sha256').update(index).digest('hex'),
