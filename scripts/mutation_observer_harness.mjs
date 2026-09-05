@@ -37,6 +37,16 @@ const dom = new JSDOM(html, {
       Object.defineProperty(window, 'crypto', { value: webcrypto, configurable: true });
     } catch {}
 
+    window.matchMedia = window.matchMedia || (() => ({
+      matches: false,
+      media: '',
+      onchange: null,
+      addListener() {},
+      removeListener() {},
+      addEventListener() {},
+      removeEventListener() {},
+      dispatchEvent() { return false; }
+    }));
     window.fetch = async () => ({
       ok: false,
       status: 503,
