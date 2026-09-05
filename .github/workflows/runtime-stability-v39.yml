@@ -74,7 +74,8 @@ jobs:
           grep -Fq "PH_V26_MUTATION_STABILITY = '40.0.0'" patches/ui-v26.js
           grep -Fq "PH_V27_MUTATION_STABILITY = '40.0.0'" patches/auto-pipeline-v27.js
           grep -Fq "PH_V32_MUTATION_STABILITY = '40.0.0'" patches/status-sync-v32.js
-          grep -Fq "PH_V34_MUTATION_STABILITY = '40.0.1'" patches/compact-interaction-v34.js
+          grep -Fq "PH_V34_MUTATION_STABILITY = '40.0.2'" patches/compact-interaction-v34.js
+          grep -Fq "implicitStopIssued" patches/compact-interaction-v34.js
           grep -Fq "syncFetchingState();" patches/compact-interaction-v34.js
           grep -Fq "guardUnexpectedTesting();" patches/compact-interaction-v34.js
           grep -Fq "PH_V38_STATE_STABILITY = '40.0.0'" patches/runtime-smart-v38.js
