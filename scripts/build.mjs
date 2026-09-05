@@ -5,7 +5,8 @@ const assets = {
   css: [
     { path: '/patches/ui-v26.css', tag: '<link rel="stylesheet" href="/patches/ui-v26.css" data-proxyharvest-ui="v26">' },
     { path: '/patches/auto-pipeline-v27.css', tag: '<link rel="stylesheet" href="/patches/auto-pipeline-v27.css" data-proxyharvest-pipeline="v27">' },
-    { path: '/patches/layout-v28.css', tag: '<link rel="stylesheet" href="/patches/layout-v28.css" data-proxyharvest-layout="v29">' }
+    { path: '/patches/layout-v28.css', tag: '<link rel="stylesheet" href="/patches/layout-v28.css" data-proxyharvest-layout="v29">' },
+    { path: '/patches/layout-v31-1368.css', tag: '<link rel="stylesheet" href="/patches/layout-v31-1368.css" data-proxyharvest-layout="v31-1368x753">' }
   ],
   js: [
     { path: '/patches/ui-v26.js', tag: '<script defer src="/patches/ui-v26.js" data-proxyharvest-ui="v26"></script>' },
@@ -42,7 +43,8 @@ const manifest = {
   build: actual,
   uiPatch: '26.0.0-github-main-ui',
   autoPipeline: '27.0.0-auto-pipeline',
-  layoutPatch: '29.0.0-collision-proof-responsive',
+  layoutPatch: '31.0.0-canonical-1368x753',
+  canonicalViewport: '1368x753',
   source: 'github-main',
   indexSha256: createHash('sha256').update(index).digest('hex'),
   runtimeSha256: createHash('sha256').update(runtime).digest('hex'),
