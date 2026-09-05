@@ -48,7 +48,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for f in index.html proxyharvest.html proxyharvest.js package.json vercel.json patches/ui-v26.js patches/ui-v26.css patches/auto-pipeline-v27.js patches/auto-pipeline-v27.css patches/layout-v28.css patches/layout-v31-1368.css patches/status-sync-v32.js patches/status-sync-v32.css patches/status-guard-v32.js patches/compact-interaction-v34.js patches/compact-contrast-v34.css patches/configs-density-v35.js patches/configs-density-v35.css scripts/build.mjs api/ai/health.js api/ai/advise.js worker/proxyharvest-gateway.js; do
+          for f in index.html proxyharvest.html proxyharvest.js package.json vercel.json patches/ui-v26.js patches/ui-v26.css patches/auto-pipeline-v27.js patches/auto-pipeline-v27.css patches/layout-v28.css patches/layout-v31-1368.css patches/status-sync-v32.js patches/status-sync-v32.css patches/status-guard-v32.js patches/compact-interaction-v34.js patches/compact-contrast-v34.css patches/configs-density-v35.js patches/configs-density-v35.css patches/configs-row-v36.js patches/configs-row-v36.css scripts/build.mjs api/ai/health.js api/ai/advise.js worker/proxyharvest-gateway.js; do
             test -f "$f" || { echo "MISSING FILE: $f"; exit 1; }
             echo "FOUND FILE: $f"
           done
@@ -128,8 +128,25 @@ jobs:
           grep -Fq 'table-layout:fixed!important' patches/configs-density-v35.css
           grep -Fq 'height:38px!important' patches/configs-density-v35.css
           grep -Fq 'data-proxyharvest-configs-density="v35"' scripts/build.mjs
-          grep -Fq '"configsDensity": "35.0.0-configs-density"' scripts/build.mjs
+          grep -Fq "configsDensity: '35.0.0-configs-density'" scripts/build.mjs
           echo 'PASS V35-dense-justified-configs'
+
+      - name: Validate V36 single-line rows and native scrollbars
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check patches/configs-row-v36.js
+          grep -Fq "const BUILD = '36.0.0-single-line-rows'" patches/configs-row-v36.js
+          grep -Fq "low.includes('worker reachable')" patches/configs-row-v36.js
+          grep -Fq "return ['Reachable'" patches/configs-row-v36.js
+          grep -Fq 'ProxyHarvest V36' patches/configs-row-v36.css
+          grep -Fq 'scrollbar-color:auto!important' patches/configs-row-v36.css
+          grep -Fq 'background:revert!important' patches/configs-row-v36.css
+          grep -Fq 'display:flex!important' patches/configs-row-v36.css
+          grep -Fq 'white-space:nowrap!important' patches/configs-row-v36.css
+          grep -Fq 'data-proxyharvest-configs-row="v36"' scripts/build.mjs
+          grep -Fq "configsRow: '36.0.0-single-line-rows'" scripts/build.mjs
+          echo 'PASS V36-single-line-native-scrollbars'
 
       - name: Build deploy output
         shell: bash
@@ -141,11 +158,15 @@ jobs:
           test -f public/proxyharvest.js
           test -f public/patches/configs-density-v35.js
           test -f public/patches/configs-density-v35.css
+          test -f public/patches/configs-row-v36.js
+          test -f public/patches/configs-row-v36.css
           test -f public/build.json
           grep -Fq 'data-proxyharvest-configs-density="v35"' public/index.html
-          grep -Fq 'patches/configs-density-v35.js' public/index.html
-          grep -Fq 'patches/configs-density-v35.css' public/index.html
+          grep -Fq 'data-proxyharvest-configs-row="v36"' public/index.html
+          grep -Fq 'patches/configs-row-v36.js' public/index.html
+          grep -Fq 'patches/configs-row-v36.css' public/index.html
           grep -Fq '"configsDensity": "35.0.0-configs-density"' public/build.json
+          grep -Fq '"configsRow": "36.0.0-single-line-rows"' public/build.json
           echo 'PASS deploy-output'
 
       - name: Truthful verification safety gate
@@ -164,4 +185,4 @@ jobs:
 
       - name: Summary
         run: |
-          echo "GitHub main is canonical: attachment UI/runtime + V26 UI + V27 pipeline + V31 responsive dashboard + V32 truthful verification + V34 explicit-run guard + V35 dense justified Configs + AI API + Worker source."
+          echo "GitHub main is canonical: attachment UI/runtime + V26 UI + V27 pipeline + V31 responsive dashboard + V32 truthful verification + V34 explicit-run guard + V35 dense Configs + V36 single-line rows/native scrollbars + AI API + Worker source."
