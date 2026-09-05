@@ -44,15 +44,37 @@ async function udpHint(host,port,timeoutMs=1800){
   return await new Promise(resolve=>{const s=dgram.createSocket(address.includes(':')?'udp6':'udp4');let done=false;const finish=o=>{if(done)return;done=true;clearTimeout(t);try{s.close()}catch{};resolve(o)};s.once('error',e=>finish({ok:true,bridgeReachable:null,udpSent:false,error:e.message,method:'node-udp'}));s.send(Buffer.from([0]),Number(port),address,e=>{if(e)return finish({ok:true,bridgeReachable:null,udpSent:false,error:e.message,method:'node-udp'});});s.once('message',()=>finish({ok:true,bridgeReachable:true,udpSent:true,udpReply:true,latencyMs:Date.now()-started,method:'node-udp-reply'}));const t=setTimeout(()=>finish({ok:true,bridgeReachable:null,udpSent:true,udpReply:false,latencyMs:Date.now()-started,method:'node-udp-send'}),timeoutMs);});
 }
 function decodeB64(s){s=String(s||'').replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';return Buffer.from(s,'base64').toString('utf8')}
+function tlsFromQuery(q, host){
+  const security=(q.get('security')||'').toLowerCase();
+  if(security!=='tls' && security!=='reality') return undefined;
+  const out={enabled:true,server_name:q.get('sni')||q.get('serverName')||host,insecure:security!=='reality'};
+  const fp=q.get('fp')||q.get('fingerprint');
+  if(fp && fp!=='none') out.utls={enabled:true,fingerprint:fp};
+  const alpn=q.get('alpn'); if(alpn) out.alpn=alpn.split(',').map(x=>x.trim()).filter(Boolean);
+  if(security==='reality'){
+    const publicKey=q.get('pbk')||q.get('publicKey')||q.get('public_key');
+    const shortId=q.get('sid')||q.get('shortId')||q.get('short_id')||'';
+    if(!publicKey) throw new Error('reality-public-key-missing');
+    out.insecure=false;
+    out.reality={enabled:true,public_key:publicKey,short_id:shortId};
+  }
+  return out;
+}
+function transportFromQuery(q){
+  const transportType=(q.get('type')||'tcp').toLowerCase();
+  if(transportType==='ws') return {type:'ws',path:q.get('path')||'/',headers:q.get('host')?{Host:q.get('host')}:undefined};
+  if(transportType==='grpc') return {type:'grpc',service_name:q.get('serviceName')||q.get('service_name')||''};
+  if(transportType==='http') return {type:'http',host:(q.get('host')||'').split(',').filter(Boolean),path:q.get('path')||'/'};
+  return undefined;
+}
 function parseUri(raw){
   const text=String(raw||'').trim();
   if(text.startsWith('vmess://')){const j=JSON.parse(decodeB64(text.slice(8)));return {type:'vmess',server:j.add,server_port:Number(j.port),uuid:j.id,security:j.scy||'auto',alter_id:Number(j.aid||0),tls:j.tls==='tls'?{enabled:true,server_name:j.sni||j.host||j.add,insecure:true}:undefined,transport:j.net==='ws'?{type:'ws',path:j.path||'/',headers:j.host?{Host:j.host}:undefined}:undefined};}
   const u=new URL(text); const type=u.protocol.replace(':',''); const q=u.searchParams; const common={type,server:u.hostname,server_port:Number(u.port||443)};
-  const tlsEnabled=(q.get('security')||'').toLowerCase()==='tls'; const transportType=(q.get('type')||'tcp').toLowerCase();
-  let transport; if(transportType==='ws') transport={type:'ws',path:q.get('path')||'/',headers:q.get('host')?{Host:q.get('host')}:undefined}; else if(transportType==='grpc') transport={type:'grpc',service_name:q.get('serviceName')||q.get('service_name')||''};
-  if(type==='vless') return {...common,uuid:decodeURIComponent(u.username),flow:q.get('flow')||undefined,tls:tlsEnabled?{enabled:true,server_name:q.get('sni')||q.get('serverName')||u.hostname,insecure:true}:undefined,transport};
-  if(type==='trojan') return {...common,password:decodeURIComponent(u.username),tls:{enabled:true,server_name:q.get('sni')||u.hostname,insecure:true},transport};
-  if(type==='wireguard') return {type:'wireguard',server:u.hostname,server_port:Number(u.port||51820),local_address:(q.get('address')||'172.16.0.2/32').split(','),private_key:decodeURIComponent(u.username),peer_public_key:q.get('publickey')||q.get('public_key')||'',pre_shared_key:q.get('presharedkey')||q.get('pre_shared_key')||undefined,reserved:(q.get('reserved')||'').split(',').map(Number).filter(Number.isFinite),mtu:Number(q.get('mtu')||1408)};
+  const transport=transportFromQuery(q);
+  if(type==='vless') return {...common,uuid:decodeURIComponent(u.username),flow:q.get('flow')||undefined,tls:tlsFromQuery(q,u.hostname),transport};
+  if(type==='trojan') return {...common,password:decodeURIComponent(u.username),tls:tlsFromQuery(q,u.hostname)||{enabled:true,server_name:q.get('sni')||u.hostname,insecure:true},transport};
+  if(type==='wireguard') return {type:'wireguard',server:u.hostname,server_port:Number(u.port||51820),local_address:(q.get('address')||'172.16.0.2/32').split(',').map(x=>x.trim()).filter(Boolean),private_key:decodeURIComponent(u.username),peer_public_key:q.get('publickey')||q.get('public_key')||'',pre_shared_key:q.get('presharedkey')||q.get('pre_shared_key')||undefined,reserved:(q.get('reserved')||'').split(',').map(Number).filter(Number.isFinite),mtu:Number(q.get('mtu')||1408),keepalive:Number(q.get('keepalive')||q.get('persistent_keepalive_interval')||25)};
   throw new Error('unsupported-protocol');
 }
 async function freePort(){return await new Promise((resolve,reject)=>{const s=net.createServer();s.listen(0,'127.0.0.1',()=>{const p=s.address().port;s.close(()=>resolve(p))});s.on('error',reject)});}
@@ -60,7 +82,9 @@ async function waitPort(port,timeout=3500){const end=Date.now()+timeout;while(Da
 function singConfig(outbound,port){
   const config={log:{level:'error'},inbounds:[{type:'mixed',tag:'in',listen:'127.0.0.1',listen_port:port}],outbounds:[],route:{final:'proxy'}};
   if(outbound.type==='wireguard'){
-    const peer={address:outbound.server,port:outbound.server_port,public_key:outbound.peer_public_key,allowed_ips:['0.0.0.0/0','::/0']}; if(outbound.pre_shared_key)peer.pre_shared_key=outbound.pre_shared_key;if(outbound.reserved?.length)peer.reserved=outbound.reserved;
+    if(!outbound.private_key||!outbound.peer_public_key) throw new Error('wireguard-key-missing');
+    const peer={address:outbound.server,port:outbound.server_port,public_key:outbound.peer_public_key,allowed_ips:['0.0.0.0/0','::/0'],persistent_keepalive_interval:outbound.keepalive||25};
+    if(outbound.pre_shared_key)peer.pre_shared_key=outbound.pre_shared_key;if(outbound.reserved?.length)peer.reserved=outbound.reserved;
     config.endpoints=[{type:'wireguard',tag:'proxy',system:false,name:'phwg',mtu:outbound.mtu||1408,address:outbound.local_address,private_key:outbound.private_key,peers:[peer]}];
     config.outbounds=[{type:'direct',tag:'direct'}];
   } else { config.outbounds=[{...outbound,tag:'proxy'}]; }
@@ -69,7 +93,10 @@ function singConfig(outbound,port){
 async function verifyViaSingBox(uri,timeoutMs=15000){
   if(!SING_BOX||!CURL) return {ok:true,bridgeReachable:null,protocolVerified:null,tunnelVerified:null,method:'transport-only',evidence:['sing-box or curl not found']};
   let outbound; try{outbound=parseUri(uri)}catch(e){return {ok:true,protocolVerified:null,tunnelVerified:null,method:'unsupported-uri',error:e.message,evidence:[e.message]};}
-  const port=await freePort(); const dir=await fs.mkdtemp(path.join(os.tmpdir(),'proxyharvest-')); const conf=path.join(dir,'sing-box.json'); await fs.writeFile(conf,JSON.stringify(singConfig(outbound,port)));
+  let config; try{config=singConfig(outbound,await freePort())}catch(e){return {ok:true,protocolVerified:null,tunnelVerified:null,method:'invalid-config',error:e.message,evidence:[e.message]};}
+  const port=config.inbounds[0].listen_port; const dir=await fs.mkdtemp(path.join(os.tmpdir(),'proxyharvest-')); const conf=path.join(dir,'sing-box.json'); await fs.writeFile(conf,JSON.stringify(config));
+  const check=spawnSync(SING_BOX,['check','-c',conf],{encoding:'utf8',timeout:5000});
+  if(check.status!==0){await fs.rm(dir,{recursive:true,force:true}).catch(()=>{});return {ok:true,protocolVerified:false,tunnelVerified:false,method:'sing-box-config-invalid',error:(check.stderr||check.stdout||'sing-box check failed').slice(0,500),evidence:['sing-box-check=failed']};}
   const child=spawn(SING_BOX,['run','-c',conf],{stdio:['ignore','ignore','pipe']}); let stderr=''; child.stderr.on('data',d=>{stderr=(stderr+d).slice(-2000)});
   try{
     const ready=await waitPort(port,4500); if(!ready)return {ok:true,protocolVerified:false,tunnelVerified:false,method:'sing-box-start-failed',error:stderr||'sing-box did not open local proxy'};
@@ -81,7 +108,7 @@ const server=http.createServer(async(req,res)=>{
   if(req.method==='OPTIONS'){res.writeHead(204,cors);return res.end()}
   const u=new URL(req.url,`http://${req.headers.host||HOST}`);
   try{
-    if(u.pathname==='/health') return send(res,200,{ok:true,service:'ProxyHarvest Real Test Bridge',verifier:!!SING_BOX&&!!CURL,capabilities:{tcp:true,tls:true,udpTransport:true,singBox:!!SING_BOX,curl:!!CURL},listen:`http://${HOST}:${PORT}`});
+    if(u.pathname==='/health') return send(res,200,{ok:true,service:'ProxyHarvest Real Test Bridge v38',verifier:!!SING_BOX&&!!CURL,capabilities:{tcp:true,tls:true,udpTransport:true,vlessReality:true,wireguardEndpoint:true,singBox:!!SING_BOX,curl:!!CURL},listen:`http://${HOST}:${PORT}`});
     if(u.pathname==='/ping-host'){
       const host=u.searchParams.get('host')||'';const port=Number(u.searchParams.get('port')||443);const type=(u.searchParams.get('type')||'').toLowerCase();const useTLS=u.searchParams.get('tls')==='1';const timeoutMs=Math.min(15000,Number(u.searchParams.get('timeoutMs')||8000));
       const out=type==='wireguard'?await udpHint(host,port):await tcpPing(host,port,useTLS,timeoutMs);return send(res,200,out);
