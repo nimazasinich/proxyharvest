@@ -19,7 +19,7 @@ jobs:
   deploy-worker:
     runs-on: ubuntu-latest
     environment: Production
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
 
@@ -33,25 +33,28 @@ jobs:
           grep -Fq "streaming-cors-relay" worker/proxyharvest-gateway.js
           grep -Fq "'/source-check'" worker/proxyharvest-gateway.js
           grep -Fq "'/bridge/health'" worker/proxyharvest-gateway.js
+          grep -Fq "'/ai/health'" worker/proxyharvest-gateway.js
+          grep -Fq "'/ai/advise'" worker/proxyharvest-gateway.js
+          grep -Fq "https://router.huggingface.co/v1/chat/completions" worker/proxyharvest-gateway.js
           grep -Fq "raw-tcp-tls" worker/proxyharvest-gateway.js
           grep -Fq "verifier:false" worker/proxyharvest-gateway.js
+          grep -Fq "A repair is never verification" worker/proxyharvest-gateway.js
           if grep -Fq "ALLOWED_HOSTS" worker/proxyharvest-gateway.js; then
             echo "Legacy fixed allowlist detected; refusing deployment."
             exit 1
           fi
-          echo 'PASS: v42 gateway source contract.'
+          echo 'PASS: v42 gateway + HF repair-advisor source contract.'
 
-      - name: Require Cloudflare API token
+      - name: Require Cloudflare and Hugging Face secrets
         shell: bash
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.cluadflairapi }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN || secrets.huggingfacetoken }}
         run: |
           set -euo pipefail
-          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
-            echo "Cloudflare API token GitHub Actions secret is missing."
-            echo "Expected CLOUDFLARE_API_TOKEN or configured alias cluadflairapi."
-            exit 2
-          fi
+          test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo 'Cloudflare token missing (CLOUDFLARE_API_TOKEN/cluadflairapi).'; exit 2; }
+          test -n "${HF_TOKEN:-}" || { echo 'Hugging Face token missing (HF_TOKEN/huggingfacetoken).'; exit 2; }
+          echo 'PASS: required deployment secrets are present.'
 
       - name: Deploy proxyharvest-gateway
         shell: bash
@@ -69,7 +72,24 @@ jobs:
             --compatibility-date 2026-09-05 \
             "${EXTRA[@]}"
 
-      - name: Verify live Worker health and relay contract
+      - name: Configure HF_TOKEN as Worker secret
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.cluadflairapi }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN || secrets.huggingfacetoken }}
+        run: |
+          set -euo pipefail
+          EXTRA=()
+          if [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+            EXTRA+=(--account-id "$CLOUDFLARE_ACCOUNT_ID")
+          fi
+          printf '%s' "$HF_TOKEN" | npx --yes wrangler@latest secret put HF_TOKEN \
+            --name proxyharvest-gateway \
+            "${EXTRA[@]}"
+          echo 'PASS: HF_TOKEN stored as Cloudflare Worker secret.'
+
+      - name: Verify live Worker, relay and HF advisor
         shell: bash
         run: |
           set -euo pipefail
@@ -79,10 +99,11 @@ jobs:
             echo "$BODY"
             if printf '%s' "$BODY" | grep -Fq 'ProxyHarvest Worker Gateway v42' \
               && printf '%s' "$BODY" | grep -Fq 'streaming-cors-relay' \
-              && printf '%s' "$BODY" | grep -Fq 'raw-tcp-tls'; then
+              && printf '%s' "$BODY" | grep -Fq 'raw-tcp-tls' \
+              && printf '%s' "$BODY" | grep -Fq '"configured":true'; then
               break
             fi
-            [ "$attempt" -lt 6 ] || { echo 'Live Worker did not report expected v42 health.'; exit 1; }
+            [ "$attempt" -lt 6 ] || { echo 'Live Worker did not report expected v42/HF-secret health.'; exit 1; }
             sleep 5
           done
 
@@ -92,10 +113,27 @@ jobs:
           printf '%s' "$EDGE" | grep -Fq '"verifier":false'
 
           TEST_URL='https://raw.githubusercontent.com/free-nodes/v2rayfree/main/README.md'
-          CHECK="$(curl -fsS --max-time 20 "$BASE/source-check?url=$(python3 -c 'import urllib.parse; print(urllib.parse.quote("'"$TEST_URL"'", safe=""))')")"
+          ENCODED="$(python3 -c 'import urllib.parse; print(urllib.parse.quote("'"$TEST_URL"'", safe=""))')"
+          CHECK="$(curl -fsS --max-time 20 "$BASE/source-check?url=$ENCODED")"
           echo "$CHECK"
           printf '%s' "$CHECK" | grep -Fq '"ok":true'
 
-          RAW="$(curl -fsS --max-time 20 "$BASE/?url=$(python3 -c 'import urllib.parse; print(urllib.parse.quote("'"$TEST_URL"'", safe=""))')" | head -c 80)"
-          test -n "$RAW"
-          echo 'PASS: live v42 Worker health, Cloud Edge Relay semantics, source-check, and raw CORS relay.'
+          RAW_FILE="$(mktemp)"
+          curl -fsS --max-time 20 "$BASE/?url=$ENCODED" -o "$RAW_FILE"
+          test -s "$RAW_FILE"
+          echo "Raw relay sample: $(head -c 80 "$RAW_FILE" | tr '\n' ' ')"
+
+          AI="$(curl -fsS --max-time 35 "$BASE/ai/health?deep=1")"
+          echo "$AI"
+          printf '%s' "$AI" | grep -Fq '"mode":"huggingface-provider"'
+          printf '%s' "$AI" | grep -Fq '"loaded":true'
+
+          ADVICE="$(curl -fsS --max-time 35 -X POST -H 'Content-Type: application/json' \
+            --data '{"items":[{"index":0,"issues":["sni"],"type":"vless","candidates":[{"id":"candidate-a","summary":"bounded reversible candidate","rule_confidence":72}]}]}' \
+            "$BASE/ai/advise")"
+          echo "$ADVICE"
+          printf '%s' "$ADVICE" | grep -Fq '"ok":true'
+          printf '%s' "$ADVICE" | grep -Fq '"verification":false'
+          printf '%s' "$ADVICE" | grep -Fq 'candidate-a'
+
+          echo 'PASS: live v42 Worker + raw relay + source health + Cloud Edge Relay + HF repair advisor.'
