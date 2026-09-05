@@ -1,0 +1,196 @@
+/* ProxyHarvest V34 — compact/contrast normalization for Configs and all utility pages */
+:root{
+  --ph34-ink:#20304a;
+  --ph34-muted:#6a7b93;
+  --ph34-line:#dce4ef;
+  --ph34-line-strong:#cdd8e7;
+  --ph34-panel:#ffffff;
+  --ph34-soft:#f7f9fc;
+  --ph34-purple:#6848ee;
+  --ph34-blue:#167bd9;
+  --ph34-cyan:#0f8fb9;
+  --ph34-green:#118653;
+  --ph34-orange:#a85a12;
+  --ph34-red:#c94b5b;
+  --ph34-shadow:0 8px 22px rgba(30,48,84,.07);
+}
+
+/* Compact non-dashboard topbar */
+@media (min-width:1100px){
+  body:has(#tab-configs.active) .ph-global-topbar,
+  body:has(#tab-splitnet.active) .ph-global-topbar,
+  body:has(#tab-ircf.active) .ph-global-topbar,
+  body:has(#tab-sources.active) .ph-global-topbar,
+  body:has(#tab-wireguard.active) .ph-global-topbar,
+  body:has(#tab-ai-healer.active) .ph-global-topbar,
+  body:has(#tab-settings.active) .ph-global-topbar,
+  body:has(#tab-infrastructure.active) .ph-global-topbar{
+    height:62px!important;
+    min-height:62px!important;
+    padding:0 14px!important;
+    background:rgba(255,255,255,.96)!important;
+    border-bottom:1px solid var(--ph34-line)!important;
+    box-shadow:0 4px 16px rgba(31,48,88,.04)!important;
+  }
+  body:has(#tab-configs.active) .ph-global-title h1,
+  body:has(#tab-splitnet.active) .ph-global-title h1,
+  body:has(#tab-ircf.active) .ph-global-title h1,
+  body:has(#tab-sources.active) .ph-global-title h1,
+  body:has(#tab-wireguard.active) .ph-global-title h1,
+  body:has(#tab-ai-healer.active) .ph-global-title h1,
+  body:has(#tab-settings.active) .ph-global-title h1,
+  body:has(#tab-infrastructure.active) .ph-global-title h1{font-size:21px!important;line-height:1!important;color:var(--ph34-ink)!important}
+  body:has(#tab-configs.active) .ph-global-title p,
+  body:has(#tab-splitnet.active) .ph-global-title p,
+  body:has(#tab-ircf.active) .ph-global-title p,
+  body:has(#tab-sources.active) .ph-global-title p,
+  body:has(#tab-wireguard.active) .ph-global-title p,
+  body:has(#tab-ai-healer.active) .ph-global-title p,
+  body:has(#tab-settings.active) .ph-global-title p,
+  body:has(#tab-infrastructure.active) .ph-global-title p{font-size:9px!important;color:var(--ph34-muted)!important;margin-top:3px!important}
+}
+
+/* Global button readability on light utility pages */
+#tab-configs .btn,#tab-configs .cfg-act-btn2,#tab-configs .phv26-btn,
+#tab-splitnet .btn,#tab-ircf .btn,#tab-sources .btn,#tab-wireguard .btn,
+#tab-ai-healer .btn,#tab-settings .btn,#tab-infrastructure .btn{
+  color:#30425f!important;
+  background:#fff!important;
+  border-color:#d6e0ec!important;
+  text-shadow:none!important;
+  box-shadow:none!important;
+  font-weight:800!important;
+}
+#tab-configs .btn:hover,#tab-configs .cfg-act-btn2:hover,#tab-configs .phv26-btn:hover,
+#tab-splitnet .btn:hover,#tab-ircf .btn:hover,#tab-sources .btn:hover,#tab-wireguard .btn:hover,
+#tab-ai-healer .btn:hover,#tab-settings .btn:hover,#tab-infrastructure .btn:hover{
+  color:#203451!important;background:#f5f8fc!important;border-color:#becddd!important;
+}
+#tab-configs .btn-primary,#tab-configs .phv26-btn.primary,#tab-splitnet .btn-primary,#tab-splitnet .btn-purple,
+#tab-ircf .btn-primary,#tab-ircf .btn-purple,#tab-ai-healer .btn-primary,#tab-settings .btn-primary,#tab-infrastructure .btn-primary{
+  background:linear-gradient(135deg,#7354f4,#5d3be4)!important;border-color:#6243e7!important;color:#fff!important;
+}
+#tab-configs .btn-cyan,#tab-splitnet .btn-cyan,#tab-ircf .btn-cyan,#tab-sources .btn-cyan,#tab-wireguard .btn-cyan{background:#eef9ff!important;border-color:#b9dfef!important;color:#08799f!important}
+#tab-configs .btn-orange,#tab-splitnet .btn-orange,#tab-ircf .btn-orange,#tab-wireguard .btn-orange{background:#fff7ed!important;border-color:#f0cfaa!important;color:#9b5410!important}
+#tab-configs .btn-green,#tab-splitnet .btn-green,#tab-ircf .btn-green,#tab-wireguard .btn-green{background:#effaf5!important;border-color:#bfe1ce!important;color:#0d7c49!important}
+#tab-configs .btn-red,#tab-configs .phv26-btn.danger,#tab-wireguard .btn-red{background:#fff4f5!important;border-color:#efc5cb!important;color:#bd4251!important}
+#tab-configs .btn[disabled],#tab-splitnet .btn[disabled],#tab-ircf .btn[disabled],#tab-wireguard .btn[disabled]{opacity:.48!important;color:#78879b!important}
+
+/* CONFIGS: one compact workspace */
+html[data-phv26="1"] #tab-configs{padding:8px 10px 10px!important;overflow:hidden!important;background:linear-gradient(180deg,#f9fbfe,#f7f9fc)!important;color:var(--ph34-ink)!important}
+html[data-phv26="1"] #tab-configs .cfg-stats-ribbon{
+  min-height:44px!important;height:44px!important;padding:5px 9px!important;margin:0!important;border:1px solid var(--ph34-line)!important;border-radius:11px!important;background:#fff!important;box-shadow:var(--ph34-shadow)!important;gap:4px!important;flex-wrap:nowrap!important;overflow:hidden!important
+}
+html[data-phv26="1"] #tab-configs .cfg-stat-chip{min-width:50px!important;padding:2px 5px!important;gap:3px!important;white-space:nowrap!important}
+html[data-phv26="1"] #tab-configs .cfg-stat-val{font-size:11px!important;line-height:1!important;color:#31435f!important}
+html[data-phv26="1"] #tab-configs .cfg-stat-lbl{font-size:6.5px!important;color:#8090a5!important}
+html[data-phv26="1"] #tab-configs .view-toggle-group{padding:2px!important;border:1px solid var(--ph34-line)!important;border-radius:9px!important;background:#f6f8fb!important}
+html[data-phv26="1"] #tab-configs .view-toggle-btn{height:28px!important;padding:0 10px!important;font-size:9px!important;border-radius:7px!important}
+html[data-phv26="1"] #tab-configs .view-toggle-btn.active{background:#eefdff!important;border-color:#71d7ed!important;color:#0784aa!important}
+
+#tab-configs .phv26-subnav{height:36px!important;min-height:36px!important;padding:4px 7px!important;margin:6px 0!important;border-radius:10px!important;box-shadow:none!important;border-color:var(--ph34-line)!important;background:#fff!important;overflow:hidden!important}
+#tab-configs .phv26-subnav button{height:26px!important;padding:0 10px!important;font-size:9px!important;color:#586b87!important}
+#tab-configs .phv26-subnav button.active{background:#f0ecff!important;color:#5f3de4!important;border-color:#d9d0ff!important}
+#tab-configs .phv26-subnav-note{font-size:8px!important;color:#73839a!important;margin-left:auto!important;white-space:nowrap!important}
+#tab-configs .phv34-session-notice{display:inline-flex!important;align-items:center!important;max-width:330px!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;padding:4px 8px!important;border-radius:999px!important;border:1px solid #dce5ef!important;background:#f7f9fc!important;color:#60728d!important;font-size:8px!important;font-weight:750!important}
+#tab-configs .phv34-session-notice[data-state="armed"],#tab-configs .phv34-session-notice[data-state="fetching"]{background:#f0ecff!important;color:#5f3de4!important;border-color:#d7ceff!important}
+#tab-configs .phv34-session-notice[data-state="testing"]{background:#eef9ff!important;color:#08799f!important;border-color:#b9dfef!important}
+#tab-configs .phv34-session-notice[data-state="done"]{background:#effaf5!important;color:#0d7c49!important;border-color:#bfe1ce!important}
+
+html[data-phv26="1"] #tab-configs .cfgs-hdr{
+  min-height:58px!important;height:58px!important;padding:7px 9px!important;margin:0!important;border:1px solid var(--ph34-line)!important;border-radius:11px!important;background:#fff!important;box-shadow:var(--ph34-shadow)!important;display:grid!important;grid-template-columns:145px minmax(0,1fr)!important;gap:8px!important;align-items:center!important;overflow:hidden!important
+}
+html[data-phv26="1"] #tab-configs .cfgs-title{font-size:12px!important;font-weight:850!important;color:#29415f!important;white-space:nowrap!important}
+html[data-phv26="1"] #tab-configs .cfgs-filter{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:5px!important;flex-wrap:nowrap!important;min-width:0!important;width:100%!important;overflow:hidden!important}
+html[data-phv26="1"] #tab-configs .cfg-search-wrap{flex:1 1 220px!important;min-width:150px!important;max-width:280px!important}
+html[data-phv26="1"] #tab-configs .cfg-search-wrap .search-input{width:100%!important;color:#31435f!important;background:#fbfcfe!important;border-color:#d8e2ee!important}
+html[data-phv26="1"] #tab-configs .fsel{width:130px!important;min-width:100px!important;background:#fbfcfe!important;color:#344866!important;border-color:#d8e2ee!important}
+html[data-phv26="1"] #tab-configs .cfg-score-wrap{height:30px!important;min-width:115px!important;background:#fbfcfe!important;border-color:#d8e2ee!important}
+html[data-phv26="1"] #tab-configs .ph-test-limit{height:30px!important;min-width:84px!important;border:1px solid #d8e2ee!important;border-radius:8px!important;background:#fbfcfe!important}
+html[data-phv26="1"] #tab-configs .cfgs-filter .btn,html[data-phv26="1"] #tab-configs .phv34-realtest-inline{height:30px!important;min-height:30px!important;padding:0 9px!important;font-size:8px!important;border-radius:8px!important;white-space:nowrap!important;flex:0 0 auto!important}
+html[data-phv26="1"] #tab-configs #realTestBtn{background:#eef9ff!important;border-color:#b9dfef!important;color:#08799f!important}
+html[data-phv26="1"] #tab-configs #realTestStopBtn{background:#fff4f5!important;border-color:#efc5cb!important;color:#bd4251!important}
+html[data-phv26="1"] #tab-configs #realTestProgressBar{display:none!important}
+body[data-phv34-run="testing"] #tab-configs #realTestProgressBar{display:flex!important;position:absolute!important;left:10px!important;right:10px!important;bottom:8px!important;height:28px!important;margin:0!important;padding:6px 9px!important;z-index:7!important}
+
+html[data-phv26="1"] #tab-configs .cfgs-action-bar{
+  min-height:42px!important;height:42px!important;padding:5px 8px!important;margin:6px 0!important;border:1px solid var(--ph34-line)!important;border-radius:10px!important;background:#fff!important;box-shadow:none!important;gap:6px!important;overflow:hidden!important
+}
+html[data-phv26="1"] #tab-configs .configs-count{font-size:9px!important;color:#64758d!important;white-space:nowrap!important}
+html[data-phv26="1"] #tab-configs .cfg-bar-right{gap:5px!important;flex-wrap:nowrap!important;min-width:0!important;overflow:hidden!important}
+html[data-phv26="1"] #tab-configs .cfg-btn-group{gap:2px!important;flex:0 0 auto!important}
+html[data-phv26="1"] #tab-configs .cfg-btn-group-label{font-size:6px!important;color:#8a98aa!important;margin-bottom:1px!important}
+html[data-phv26="1"] #tab-configs .cfg-btn-group-btns{gap:3px!important}
+html[data-phv26="1"] #tab-configs .cfg-act-btn2{height:28px!important;min-height:28px!important;padding:0 7px!important;border-radius:7px!important;background:#fff!important;color:#40516d!important;border:1px solid #dbe3ee!important}
+html[data-phv26="1"] #tab-configs .cfg-act-label{font-size:7.5px!important;color:inherit!important}
+html[data-phv26="1"] #tab-configs .cfg-act-icon{width:18px!important;height:18px!important}
+html[data-phv26="1"] #tab-configs .cfg-bar-divider{height:25px!important;background:#e5eaf1!important}
+#tab-configs #phVerifiedExportHint{display:none!important}
+
+/* Verification overview: compact row, high contrast */
+#tab-configs .ph-status-overview{margin:0 0 6px!important;padding:8px 10px!important;min-height:78px!important;border:1px solid var(--ph34-line)!important;border-radius:12px!important;background:#fff!important;box-shadow:var(--ph34-shadow)!important;overflow:hidden!important}
+#tab-configs .ph-status-title{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;margin:0 0 6px!important;min-height:18px!important}
+#tab-configs .ph-status-title b{font-size:10px!important;color:#30445f!important}
+#tab-configs .ph-status-title span{font-size:8px!important;color:#71839a!important}
+#tab-configs .ph-status-cards{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:7px!important}
+#tab-configs .ph-status-card{height:48px!important;min-height:48px!important;padding:6px 8px!important;border-radius:9px!important;background:#fff!important;border:1px solid #dde5ee!important;display:grid!important;grid-template-columns:36px minmax(0,1fr)!important;grid-template-rows:18px 16px!important;column-gap:7px!important;align-content:center!important;box-shadow:none!important;overflow:hidden!important}
+#tab-configs .ph-status-card strong{grid-column:1!important;grid-row:1 / 3!important;align-self:center!important;margin:0!important;font-size:20px!important;line-height:1!important;font-weight:850!important;color:#53657f!important}
+#tab-configs .ph-status-card span{grid-column:2!important;grid-row:1!important;margin:0!important;font-size:8px!important;line-height:1!important;font-weight:850!important;letter-spacing:.04em!important;text-transform:uppercase!important;color:#53657f!important}
+#tab-configs .ph-status-card small{grid-column:2!important;grid-row:2!important;margin:0!important;font-size:7.5px!important;line-height:1.15!important;color:#7b8aa0!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+#tab-configs .ph-card-live{border-color:#bfe3cf!important;background:#f5fcf8!important}#tab-configs .ph-card-live strong,#tab-configs .ph-card-live span{color:#0f8b50!important}
+#tab-configs .ph-card-bridge{border-color:#c4e4f3!important;background:#f5fbff!important}#tab-configs .ph-card-bridge strong,#tab-configs .ph-card-bridge span{color:#147cb7!important}
+#tab-configs .ph-card-dead{border-color:#efc7cd!important;background:#fff7f8!important}#tab-configs .ph-card-dead strong,#tab-configs .ph-card-dead span{color:#c64a59!important}
+#tab-configs .ph-status-legend{display:none!important}
+
+/* Config table: stable columns, no badge collisions */
+html[data-phv26="1"] #tab-configs .cfgs-table-wrap{height:calc(100dvh - 350px)!important;min-height:250px!important;max-height:none!important;border:1px solid var(--ph34-line)!important;border-radius:11px!important;background:#fff!important;box-shadow:var(--ph34-shadow)!important;overflow:auto!important}
+html[data-phv26="1"] #tab-configs .cfgs-table{width:100%!important;min-width:1020px!important;table-layout:fixed!important;border-collapse:separate!important;border-spacing:0!important}
+html[data-phv26="1"] #tab-configs .cfgs-table thead th{height:34px!important;padding:5px 8px!important;background:#0d1d39!important;color:#dceaff!important;border-bottom:1px solid #213a62!important;font-size:8px!important;letter-spacing:.05em!important;text-transform:uppercase!important;white-space:nowrap!important}
+html[data-phv26="1"] #tab-configs .cfgs-table th:nth-child(1){width:34px!important}html[data-phv26="1"] #tab-configs .cfgs-table th:nth-child(2){width:92px!important}html[data-phv26="1"] #tab-configs .cfgs-table th:nth-child(3){width:230px!important}html[data-phv26="1"] #tab-configs .cfgs-table th:nth-child(4){width:62px!important}html[data-phv26="1"] #tab-configs .cfgs-table th:nth-child(5){width:105px!important}html[data-phv26="1"] #tab-configs .cfgs-table th:nth-child(6){width:130px!important}html[data-phv26="1"] #tab-configs .cfgs-table th:nth-child(7){width:92px!important}html[data-phv26="1"] #tab-configs .cfgs-table th:nth-child(8){width:72px!important}html[data-phv26="1"] #tab-configs .cfgs-table th:nth-child(9){width:220px!important}
+html[data-phv26="1"] #tab-configs .cfgs-table tbody tr{height:40px!important;background:#fff!important}
+html[data-phv26="1"] #tab-configs .cfgs-table tbody tr:nth-child(even){background:#fbfcfe!important}
+html[data-phv26="1"] #tab-configs .cfgs-table tbody tr:hover{background:#f4f8fd!important}
+html[data-phv26="1"] #tab-configs .cfgs-table td{height:40px!important;padding:5px 8px!important;font-size:9px!important;line-height:1.2!important;color:#344762!important;vertical-align:middle!important;border-bottom:1px solid #edf1f5!important;overflow:hidden!important;text-overflow:ellipsis!important}
+#tab-configs .pbadge,#tab-configs .conn-badge,#tab-configs .ph-vbadge{position:static!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;max-width:100%!important;margin:0 3px 0 0!important;min-height:22px!important;padding:0 7px!important;border-radius:999px!important;font-size:7.5px!important;line-height:1!important;white-space:nowrap!important;vertical-align:middle!important}
+#tab-configs .host-cell{min-width:0!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+#tab-configs .ph-host-stack{display:flex!important;align-items:center!important;gap:5px!important;min-width:0!important;flex-wrap:nowrap!important;overflow:hidden!important}
+#tab-configs .ph-row-evidence{display:none!important}
+#tab-configs .cfg-row-actions{display:flex!important;align-items:center!important;gap:4px!important;flex-wrap:nowrap!important;min-width:0!important;overflow:hidden!important}
+#tab-configs .cfg-row-actions .btn{width:27px!important;height:27px!important;min-width:27px!important;padding:0!important;border-radius:7px!important;flex:0 0 27px!important}
+#tab-configs .lat-good,#tab-configs .lat-ok,#tab-configs .lat-slow,#tab-configs .lat-pending,#tab-configs .doh-ok,#tab-configs .doh-bad,#tab-configs .doh-pend{font-size:8px!important;white-space:nowrap!important}
+
+/* Verification / Export subpages */
+#tab-configs .phv26-config-panel{margin:0!important;padding:10px!important;border:1px solid var(--ph34-line)!important;border-radius:11px!important;background:#fff!important;box-shadow:var(--ph34-shadow)!important;color:var(--ph34-ink)!important}
+#tab-configs .phv26-panel-head{margin-bottom:7px!important}.phv26-panel-head b{color:#2b4160!important}.phv26-panel-head span{color:#71829a!important}
+#tab-configs .phv26-metrics>div,#tab-configs .phv26-verify-grid>div{background:#f8fafc!important;border-color:#e1e7ef!important}
+#tab-configs .phv26-export-controls select,#tab-configs .phv26-export-controls input{background:#fff!important;color:#324660!important;border-color:#d8e2ee!important}
+
+/* Shared utility page contrast + density */
+#tab-splitnet,#tab-ircf,#tab-sources,#tab-wireguard,#tab-ai-healer,#tab-settings,#tab-infrastructure{background:linear-gradient(180deg,#f9fbfe,#f7f9fc)!important;color:var(--ph34-ink)!important}
+#tab-splitnet .splitnet-bar,#tab-ircf .ircf-bar,#tab-wireguard .wg-section-bar,#tab-sources .src-toolbar,#tab-settings .ph-settings-guide,#tab-infrastructure .infra-card,#tab-ai-healer .ph25-hf-panel{background:#fff!important;color:var(--ph34-ink)!important;border:1px solid var(--ph34-line)!important;box-shadow:var(--ph34-shadow)!important}
+#tab-splitnet .splitnet-card,#tab-wireguard .wg-card,#tab-ircf .ircf-pane,#tab-settings .setting-group,#tab-infrastructure .settings-card{background:#fff!important;color:var(--ph34-ink)!important;border-color:var(--ph34-line)!important;box-shadow:0 5px 16px rgba(30,48,84,.05)!important}
+#tab-splitnet .splitnet-card *,#tab-ircf .ircf-pane *,#tab-wireguard .wg-card *,#tab-settings .setting-group *,#tab-ai-healer .ph25-hf-panel *,#tab-infrastructure .settings-card *{text-shadow:none!important}
+#tab-ircf .ircf-infobox{background:#f8fbff!important;color:#4d617e!important;border:1px solid #d8e6f0!important}
+#tab-ircf .ircf-pane-hdr{background:#f5f8fc!important;color:#29415f!important;border-bottom:1px solid var(--ph34-line)!important}
+#tab-ircf .ircf-pane-scroll{background:#fff!important;color:#415572!important}
+#tab-ai-healer .ph25-engine-matrix .head{background:#f4f7fb!important;color:#5e718e!important}
+#tab-ai-healer .ph25-engine-matrix>div{color:#40536f!important;border-color:#e5eaf1!important}
+#tab-settings .perf-tip,#tab-settings .setting-help,#tab-settings .ph-field-help{color:#64758e!important}
+
+/* Responsive utility workspaces */
+@media (max-width:1280px){
+  html[data-phv26="1"] #tab-configs .cfgs-hdr{grid-template-columns:120px minmax(0,1fr)!important}
+  html[data-phv26="1"] #tab-configs .cfgs-filter{gap:4px!important}
+  html[data-phv26="1"] #tab-configs .cfg-search-wrap{max-width:220px!important}
+  html[data-phv26="1"] #tab-configs .fsel{width:105px!important}
+  #tab-configs .phv34-session-notice{max-width:220px!important}
+}
+@media (max-width:1100px){
+  html[data-phv26="1"] #tab-configs{overflow:auto!important}
+  html[data-phv26="1"] #tab-configs .cfgs-hdr{height:auto!important;min-height:0!important;grid-template-columns:1fr!important}
+  html[data-phv26="1"] #tab-configs .cfgs-filter{justify-content:flex-start!important;flex-wrap:wrap!important;overflow:visible!important}
+  html[data-phv26="1"] #tab-configs .cfgs-action-bar{height:auto!important;min-height:0!important;overflow:visible!important}
+  html[data-phv26="1"] #tab-configs .cfg-bar-right{flex-wrap:wrap!important;overflow:visible!important}
+  #tab-configs .ph-status-cards{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  html[data-phv26="1"] #tab-configs .cfgs-table-wrap{height:480px!important}
+}
