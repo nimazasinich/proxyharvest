@@ -3,7 +3,8 @@ import { readFile } from 'node:fs/promises';
 const read = p => readFile(p, 'utf8');
 const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
 
-const [v38,v32,v27,v34,v35,v36,guard,build,pkgRaw] = await Promise.all([
+const [v42,v38,v32,v27,v34,v35,v36,guard,build,pkgRaw] = await Promise.all([
+  read('patches/control-center-v42.js'),
   read('patches/runtime-smart-v38.js'),
   read('patches/status-sync-v32.js'),
   read('patches/auto-pipeline-v27.js'),
@@ -21,6 +22,16 @@ assert(v38.includes("if(current===next)return false"), 'V38 form setters still d
 assert(!v38.includes("mo.observe(document.documentElement,{subtree:true,childList:true})"), 'V38 broad self-triggering documentElement observer still present');
 assert(v38.includes("setTimeout(()=>{repairTimer=null;repairUi()},180)"), 'V38 DOM repair is not debounced');
 assert(v38.includes("document.visibilityState==='visible'"), 'V38 periodic work is not visibility-aware');
+
+assert(v42.includes("42.0.0-auto-control-center"), 'V42 control center marker missing');
+assert(v42.includes("if(el.textContent===n)return false"), 'V42 text writes are not idempotent');
+assert(v42.includes("if(el.getAttribute(k)===n)return false"), 'V42 attribute writes are not idempotent');
+assert(!v42.includes('new MutationObserver'), 'V42 must not add mutation observers');
+assert(v42.includes('AUTO_INTERVAL=15*60*1000'), 'V42 auto-harvest cadence missing');
+assert(v42.includes("document.visibilityState==='visible'"), 'V42 periodic work is not visibility-aware');
+assert(v42.includes('ph-v42-source-migration-1'), 'V42 source migration marker missing');
+assert(v42.includes('PROXYHARVEST_V32?.counts'), 'V42 verification counters are not using the canonical V32 source');
+assert(v42.includes('Only the Local Real Test Bridge may set protocol/tunnel/WireGuard verification evidence'), 'V42 truthful verification boundary missing');
 
 assert(v36.includes("el.dataset.phv36Normalized === '1'"), 'V36 evidence pill observer can still rewrite normalized text forever');
 assert(v35.includes("title && title.textContent !== next"), 'V35 status title can still self-trigger its observer');
@@ -40,9 +51,12 @@ const knownHotIntervals = [
 ];
 for (const [name, text, rx] of knownHotIntervals) assert(!rx.test(text), `${name}: legacy hot polling remains`);
 
-assert(build.includes("smartRuntime: '38.2.0-smart-runtime-stability'"), 'build.json manifest version not upgraded');
+assert(build.includes("smartRuntime: '38.2.0-smart-runtime-stability'"), 'V38 build manifest marker missing');
+assert(build.includes("controlCenter: '42.0.0-auto-control-center'"), 'V42 build manifest marker missing');
+assert(build.includes("cloudEdgeRelay: '42.0.0-streaming-cors-relay'"), 'V42 Cloud Edge Relay manifest marker missing');
 const pkg = JSON.parse(pkgRaw);
-assert(pkg.version === '38.2.0-github-main-runtime-stability', 'package version not upgraded');
+assert(pkg.version === '42.0.0-github-main-auto-control-center', 'package version is not V42');
 assert(String(pkg.scripts?.check || '').includes('runtime-stability-check.mjs'), 'stability check is not part of npm run check');
+assert(String(pkg.scripts?.check || '').includes('control-center-v42.js'), 'V42 syntax check is not part of npm run check');
 
-console.log('PASS runtime-stability-static: mutation feedback loops removed and background polling throttled');
+console.log('PASS runtime-stability-static: V38 mutation hardening preserved; V42 automation is idempotent, visibility-aware, and verifier-safe');
