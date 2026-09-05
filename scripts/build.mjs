@@ -11,7 +11,8 @@ const assets = {
     { path: '/patches/compact-contrast-v34.css', tag: '<link rel="stylesheet" href="/patches/compact-contrast-v34.css" data-proxyharvest-compact="v34">' },
     { path: '/patches/configs-density-v35.css', tag: '<link rel="stylesheet" href="/patches/configs-density-v35.css" data-proxyharvest-configs-density="v35">' },
     { path: '/patches/configs-row-v36.css', tag: '<link rel="stylesheet" href="/patches/configs-row-v36.css" data-proxyharvest-configs-row="v36">' },
-    { path: '/patches/workspace-balance-v37.css', tag: '<link rel="stylesheet" href="/patches/workspace-balance-v37.css" data-proxyharvest-workspace-balance="v37">' }
+    { path: '/patches/workspace-balance-v37.css', tag: '<link rel="stylesheet" href="/patches/workspace-balance-v37.css" data-proxyharvest-workspace-balance="v37">' },
+    { path: '/patches/runtime-smart-v38.css', tag: '<link rel="stylesheet" href="/patches/runtime-smart-v38.css" data-proxyharvest-smart-runtime="v38">' }
   ],
   js: [
     { path: '/patches/ui-v26.js', tag: '<script defer src="/patches/ui-v26.js" data-proxyharvest-ui="v26"></script>' },
@@ -20,7 +21,8 @@ const assets = {
     { path: '/patches/status-guard-v32.js', tag: '<script defer src="/patches/status-guard-v32.js" data-proxyharvest-status-guard="v32"></script>' },
     { path: '/patches/compact-interaction-v34.js', tag: '<script defer src="/patches/compact-interaction-v34.js" data-proxyharvest-compact="v34"></script>' },
     { path: '/patches/configs-density-v35.js', tag: '<script defer src="/patches/configs-density-v35.js" data-proxyharvest-configs-density="v35"></script>' },
-    { path: '/patches/configs-row-v36.js', tag: '<script defer src="/patches/configs-row-v36.js" data-proxyharvest-configs-row="v36"></script>' }
+    { path: '/patches/configs-row-v36.js', tag: '<script defer src="/patches/configs-row-v36.js" data-proxyharvest-configs-row="v36"></script>' },
+    { path: '/patches/runtime-smart-v38.js', tag: '<script defer src="/patches/runtime-smart-v38.js" data-proxyharvest-smart-runtime="v38"></script>' }
   ]
 };
 
@@ -60,6 +62,9 @@ const manifest = {
   configsDensity: '35.0.0-configs-density',
   configsRow: '36.0.0-single-line-rows',
   workspaceBalance: '37.0.0-row-splitnet-shared-contrast',
+  smartRuntime: '38.0.0-smart-runtime',
+  bridge: '38.0.0-local-real-test-bridge',
+  aiProvider: 'huggingface-inference-providers',
   canonicalViewport: '1368x753',
   source: 'github-main',
   indexSha256: createHash('sha256').update(index).digest('hex'),
