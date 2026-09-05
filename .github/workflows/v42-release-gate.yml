@@ -53,7 +53,10 @@ jobs:
           grep -Fq "cloudEdgeRelay: '42.0.0-streaming-cors-relay'" scripts/build.mjs
           grep -Fq 'AUTO_INTERVAL=15*60*1000' patches/control-center-v42.js
           grep -Fq 'ph-v42-source-migration-1' patches/control-center-v42.js
-          grep -Fq 'local-real-test-bridge' bridge/proxyharvest-bridge.mjs README.md
+          grep -Fq 'protocolVerified:ok' bridge/proxyharvest-bridge.mjs
+          grep -Fq 'tunnelVerified:ok' bridge/proxyharvest-bridge.mjs
+          grep -Fq 'sing-box-tunnel' bridge/proxyharvest-bridge.mjs
+          grep -Fq "spawnSync(SING_BOX,['check'" bridge/proxyharvest-bridge.mjs
           cmp -s index.html proxyharvest.html
           git diff --check
 
