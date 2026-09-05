@@ -22,6 +22,8 @@ jobs:
     timeout-minutes: 15
     env:
       VERCEL_PROJECT: proxyharvest
+      VERCEL_TEAM_ID: team_tgCTfev6a9dYgjXVMHGmvtKl
+      VERCEL_TEAM_SLUG: dreammakers-projects-6bd02e6d
       DEFAULT_HF_MODEL: Qwen/Qwen2.5-7B-Instruct-1M:fastest
     steps:
       - uses: actions/checkout@v4
@@ -54,7 +56,7 @@ jobs:
             echo 'Environment sync is blocked until the missing GitHub Actions secret(s) are available.'
           fi
 
-      - name: Verify Vercel REST project access
+      - name: Resolve Vercel project context
         id: project
         if: steps.creds.outputs.ready == 'true'
         shell: bash
@@ -62,22 +64,32 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           set -euo pipefail
-          tmp="$(mktemp)"
-          code="$(curl -sS -o "$tmp" -w '%{http_code}' \
-            -H "Authorization: Bearer $VERCEL_TOKEN" \
-            "https://api.vercel.com/v10/projects?search=$VERCEL_PROJECT")"
-          echo "Vercel project lookup HTTP $code"
-          if [[ "$code" != 2* ]]; then
-            cat "$tmp"
-            exit 1
-          fi
-          project_id="$(jq -r --arg wanted "$VERCEL_PROJECT" '([.projects[]? | select(.name == $wanted)][0] // .projects[0] // {}) | .id // empty' "$tmp")"
+          project_id=''
+          scope_qs=''
+          for candidate in '' "teamId=$VERCEL_TEAM_ID" "slug=$VERCEL_TEAM_SLUG"; do
+            tmp="$(mktemp)"
+            url="https://api.vercel.com/v9/projects/$VERCEL_PROJECT"
+            if [ -n "$candidate" ]; then url="$url?$candidate"; fi
+            code="$(curl -sS -o "$tmp" -w '%{http_code}' -H "Authorization: Bearer $VERCEL_TOKEN" "$url")"
+            label="unscoped"
+            if [ -n "$candidate" ]; then label="$candidate"; fi
+            echo "Vercel direct project lookup ($label) HTTP $code"
+            if [[ "$code" == 2* ]]; then
+              project_id="$(jq -r '(.id // empty)' "$tmp")"
+              if [ -n "$project_id" ]; then
+                scope_qs="$candidate"
+                break
+              fi
+            else
+              jq -c '{error:(.error // .)}' "$tmp" 2>/dev/null || cat "$tmp"
+            fi
+          done
           if [ -z "$project_id" ]; then
-            echo 'Vercel API returned no matching project.'
-            cat "$tmp"
+            echo 'Vercel token is valid but cannot access proxyharvest in any tested account/team context.'
             exit 1
           fi
           echo "project_id=$project_id" >> "$GITHUB_OUTPUT"
+          echo "scope_qs=$scope_qs" >> "$GITHUB_OUTPUT"
           echo "PASS: Vercel REST can access project $VERCEL_PROJECT ($project_id)."
 
       - name: Upsert HF_TOKEN in Production and Preview
@@ -87,15 +99,14 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           HF_TOKEN: ${{ secrets.HF_TOKEN || secrets.huggingfacetoken }}
           PROJECT_ID: ${{ steps.project.outputs.project_id }}
+          SCOPE_QS: ${{ steps.project.outputs.scope_qs }}
         run: |
           set -euo pipefail
           payload="$(jq -cn --arg value "$HF_TOKEN" '{key:"HF_TOKEN",value:$value,type:"encrypted",target:["production","preview"]}')"
+          url="https://api.vercel.com/v10/projects/$PROJECT_ID/env?upsert=true"
+          if [ -n "$SCOPE_QS" ]; then url="$url&$SCOPE_QS"; fi
           tmp="$(mktemp)"
-          code="$(curl -sS -o "$tmp" -w '%{http_code}' -X POST \
-            -H "Authorization: Bearer $VERCEL_TOKEN" \
-            -H 'Content-Type: application/json' \
-            --data "$payload" \
-            "https://api.vercel.com/v10/projects/$PROJECT_ID/env?upsert=true")"
+          code="$(curl -sS -o "$tmp" -w '%{http_code}' -X POST -H "Authorization: Bearer $VERCEL_TOKEN" -H 'Content-Type: application/json' --data "$payload" "$url")"
           echo "HF_TOKEN upsert HTTP $code"
           if [[ "$code" != 2* ]]; then cat "$tmp"; exit 1; fi
           echo 'PASS: HF_TOKEN upserted for production and preview.'
@@ -106,15 +117,14 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           PROJECT_ID: ${{ steps.project.outputs.project_id }}
+          SCOPE_QS: ${{ steps.project.outputs.scope_qs }}
         run: |
           set -euo pipefail
           payload="$(jq -cn --arg value "$DEFAULT_HF_MODEL" '{key:"HF_MODEL",value:$value,type:"plain",target:["production","preview"]}')"
+          url="https://api.vercel.com/v10/projects/$PROJECT_ID/env?upsert=true"
+          if [ -n "$SCOPE_QS" ]; then url="$url&$SCOPE_QS"; fi
           tmp="$(mktemp)"
-          code="$(curl -sS -o "$tmp" -w '%{http_code}' -X POST \
-            -H "Authorization: Bearer $VERCEL_TOKEN" \
-            -H 'Content-Type: application/json' \
-            --data "$payload" \
-            "https://api.vercel.com/v10/projects/$PROJECT_ID/env?upsert=true")"
+          code="$(curl -sS -o "$tmp" -w '%{http_code}' -X POST -H "Authorization: Bearer $VERCEL_TOKEN" -H 'Content-Type: application/json' --data "$payload" "$url")"
           echo "HF_MODEL upsert HTTP $code"
           if [[ "$code" != 2* ]]; then cat "$tmp"; exit 1; fi
           echo 'PASS: HF_MODEL configured for production and preview.'
@@ -126,12 +136,13 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           PROJECT_ID: ${{ steps.project.outputs.project_id }}
+          SCOPE_QS: ${{ steps.project.outputs.scope_qs }}
         run: |
           set -euo pipefail
+          url="https://api.vercel.com/v7/deployments?projectId=$PROJECT_ID&target=production&limit=1"
+          if [ -n "$SCOPE_QS" ]; then url="$url&$SCOPE_QS"; fi
           tmp="$(mktemp)"
-          code="$(curl -sS -o "$tmp" -w '%{http_code}' \
-            -H "Authorization: Bearer $VERCEL_TOKEN" \
-            "https://api.vercel.com/v7/deployments?projectId=$PROJECT_ID&target=production&limit=1")"
+          code="$(curl -sS -o "$tmp" -w '%{http_code}' -H "Authorization: Bearer $VERCEL_TOKEN" "$url")"
           echo "Production deployment lookup HTTP $code"
           if [[ "$code" != 2* ]]; then cat "$tmp"; exit 1; fi
           deployment_id="$(jq -r '(.deployments[0].uid // .deployments[0].id // empty)' "$tmp")"
@@ -151,15 +162,14 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           PROJECT_ID: ${{ steps.project.outputs.project_id }}
           PREVIOUS_DEPLOYMENT_ID: ${{ steps.previous.outputs.deployment_id }}
+          SCOPE_QS: ${{ steps.project.outputs.scope_qs }}
         run: |
           set -euo pipefail
           payload="$(jq -cn --arg name "$VERCEL_PROJECT" --arg project "$PROJECT_ID" --arg deploymentId "$PREVIOUS_DEPLOYMENT_ID" '{name:$name,project:$project,deploymentId:$deploymentId,target:"production"}')"
+          url='https://api.vercel.com/v13/deployments?forceNew=1'
+          if [ -n "$SCOPE_QS" ]; then url="$url&$SCOPE_QS"; fi
           tmp="$(mktemp)"
-          code="$(curl -sS -o "$tmp" -w '%{http_code}' -X POST \
-            -H "Authorization: Bearer $VERCEL_TOKEN" \
-            -H 'Content-Type: application/json' \
-            --data "$payload" \
-            'https://api.vercel.com/v13/deployments?forceNew=1')"
+          code="$(curl -sS -o "$tmp" -w '%{http_code}' -X POST -H "Authorization: Bearer $VERCEL_TOKEN" -H 'Content-Type: application/json' --data "$payload" "$url")"
           echo "Production redeploy HTTP $code"
           if [[ "$code" != 2* ]]; then cat "$tmp"; exit 1; fi
           deployment_id="$(jq -r '(.id // .uid // empty)' "$tmp")"
@@ -179,13 +189,14 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           DEPLOYMENT_ID: ${{ steps.deploy.outputs.deployment_id }}
+          SCOPE_QS: ${{ steps.project.outputs.scope_qs }}
         run: |
           set -euo pipefail
           for attempt in $(seq 1 40); do
+            url="https://api.vercel.com/v13/deployments/$DEPLOYMENT_ID"
+            if [ -n "$SCOPE_QS" ]; then url="$url?$SCOPE_QS"; fi
             tmp="$(mktemp)"
-            code="$(curl -sS -o "$tmp" -w '%{http_code}' \
-              -H "Authorization: Bearer $VERCEL_TOKEN" \
-              "https://api.vercel.com/v13/deployments/$DEPLOYMENT_ID")"
+            code="$(curl -sS -o "$tmp" -w '%{http_code}' -H "Authorization: Bearer $VERCEL_TOKEN" "$url")"
             if [[ "$code" != 2* ]]; then cat "$tmp"; exit 1; fi
             state="$(jq -r '(.readyState // .state // "UNKNOWN")' "$tmp")"
             echo "Deployment state: $state"
