@@ -11,6 +11,7 @@ on:
       - 'scripts/apply_status_sync_v40.py'
       - 'scripts/apply_v34_mutation_v40.py'
       - 'scripts/apply_v38_state_v40.py'
+      - 'scripts/apply_idle_churn_v41.py'
       - 'scripts/runtime-stability-check.mjs'
       - 'scripts/mutation_writer_harness.mjs'
       - 'scripts/mutation_observer_harness.mjs'
@@ -56,12 +57,15 @@ jobs:
           python3 scripts/apply_status_sync_v40.py
           python3 scripts/apply_v34_mutation_v40.py
           python3 scripts/apply_v38_state_v40.py
+          python3 scripts/apply_idle_churn_v41.py
 
       - name: Install dependencies
         run: npm install --ignore-scripts --no-audit --no-fund
 
       - name: Syntax and static stability gates
+        shell: bash
         run: |
+          set -euo pipefail
           npm run check
           node scripts/runtime-stability-check.mjs
           node --check patches/ui-v26.js
@@ -70,6 +74,7 @@ jobs:
           node --check patches/compact-interaction-v34.js
           node --check patches/runtime-smart-v38.js
           node --check proxyharvest.js
+          python3 -m py_compile scripts/apply_idle_churn_v41.py
           grep -Fq "PH_MUTATION_STABILITY_V40 = '40.0.0'" proxyharvest.js
           grep -Fq "PH_V26_MUTATION_STABILITY = '40.0.0'" patches/ui-v26.js
           grep -Fq "PH_V27_MUTATION_STABILITY = '40.0.0'" patches/auto-pipeline-v27.js
@@ -80,6 +85,12 @@ jobs:
           grep -Fq "guardUnexpectedTesting();" patches/compact-interaction-v34.js
           grep -Fq "PH_V38_STATE_STABILITY = '40.0.0'" patches/runtime-smart-v38.js
           grep -Fq "runtimeState()?.configs" patches/runtime-smart-v38.js
+          grep -Fq "PH_V41_IDLE_STABILITY = '41.0.0'" patches/ui-v26.js
+          grep -Fq "PH_V32_RENDER_STABILITY = '41.0.0'" patches/status-sync-v32.js
+          grep -Fq "PH_V38_COUNT_STABILITY = '41.0.0'" patches/runtime-smart-v38.js
+          grep -Fq "PH_PREMIUM_IDLE_STABILITY='41.0.0'" index.html
+          grep -Fq "PH_PREMIUM_IDLE_STABILITY='41.0.0'" proxyharvest.html
+          cmp -s index.html proxyharvest.html
 
       - name: Build canonical output
         run: npm run build
@@ -116,10 +127,11 @@ jobs:
           set -euo pipefail
           git config user.email "actions@github.com"
           git config user.name "proxyharvest-runtime-stability-bot"
-          git add proxyharvest.js patches/ui-v26.js patches/runtime-smart-v38.js patches/status-sync-v32.js patches/auto-pipeline-v27.js patches/compact-interaction-v34.js patches/configs-density-v35.js patches/configs-row-v36.js patches/status-guard-v32.js scripts/apply_mutation_loop_v40.py scripts/apply_status_sync_v40.py scripts/apply_v34_mutation_v40.py scripts/apply_v38_state_v40.py scripts/build.mjs package.json
+          git add index.html proxyharvest.html proxyharvest.js patches/ui-v26.js patches/runtime-smart-v38.js patches/status-sync-v32.js patches/auto-pipeline-v27.js patches/compact-interaction-v34.js patches/configs-density-v35.js patches/configs-row-v36.js patches/status-guard-v32.js scripts/apply_mutation_loop_v40.py scripts/apply_status_sync_v40.py scripts/apply_v34_mutation_v40.py scripts/apply_v38_state_v40.py scripts/apply_idle_churn_v41.py scripts/build.mjs package.json
+          git diff --cached --check
           if git diff --cached --quiet; then
             echo 'Runtime stability fix already applied.'
             exit 0
           fi
-          git commit -m "fix: eliminate remaining MutationObserver feedback loops"
+          git commit -m "fix: eliminate idle DOM renderer churn"
           git push origin HEAD:main
