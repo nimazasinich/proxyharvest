@@ -64,4 +64,6 @@ jobs:
           echo "SELECTED_HF_MODEL=$selected"
 
       - name: Summary
-        run: echo "PASS serverless HF chat model selected: ${{ steps.probe.outputs.selected }}"
+        shell: bash
+        run: |
+          echo "PASS serverless HF chat model selected: ${{ steps.probe.outputs.selected }}"
