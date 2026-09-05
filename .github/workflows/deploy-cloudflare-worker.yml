@@ -29,12 +29,17 @@ jobs:
           set -euo pipefail
           node --check worker/proxyharvest-gateway.js
           grep -Fq "cloudflare:sockets" worker/proxyharvest-gateway.js
-          grep -Fq "ProxyHarvest Worker Gateway v38" worker/proxyharvest-gateway.js
+          grep -Fq "ProxyHarvest Worker Gateway v42" worker/proxyharvest-gateway.js
+          grep -Fq "streaming-cors-relay" worker/proxyharvest-gateway.js
+          grep -Fq "'/source-check'" worker/proxyharvest-gateway.js
+          grep -Fq "'/bridge/health'" worker/proxyharvest-gateway.js
           grep -Fq "raw-tcp-tls" worker/proxyharvest-gateway.js
+          grep -Fq "verifier:false" worker/proxyharvest-gateway.js
           if grep -Fq "ALLOWED_HOSTS" worker/proxyharvest-gateway.js; then
             echo "Legacy fixed allowlist detected; refusing deployment."
             exit 1
           fi
+          echo 'PASS: v42 gateway source contract.'
 
       - name: Require Cloudflare API token
         shell: bash
@@ -64,20 +69,33 @@ jobs:
             --compatibility-date 2026-09-05 \
             "${EXTRA[@]}"
 
-      - name: Verify live Worker health
+      - name: Verify live Worker health and relay contract
         shell: bash
         run: |
           set -euo pipefail
-          URL='https://proxyharvest-gateway.amin-chinisaz-edu.workers.dev/health'
+          BASE='https://proxyharvest-gateway.amin-chinisaz-edu.workers.dev'
           for attempt in 1 2 3 4 5 6; do
-            BODY="$(curl -fsS --max-time 15 "$URL" || true)"
+            BODY="$(curl -fsS --max-time 15 "$BASE/health" || true)"
             echo "$BODY"
-            if printf '%s' "$BODY" | grep -Fq 'ProxyHarvest Worker Gateway v38' \
+            if printf '%s' "$BODY" | grep -Fq 'ProxyHarvest Worker Gateway v42' \
+              && printf '%s' "$BODY" | grep -Fq 'streaming-cors-relay' \
               && printf '%s' "$BODY" | grep -Fq 'raw-tcp-tls'; then
-              echo 'PASS: live Worker matches repository v38 raw TCP/TLS gateway.'
-              exit 0
+              break
             fi
+            [ "$attempt" -lt 6 ] || { echo 'Live Worker did not report expected v42 health.'; exit 1; }
             sleep 5
           done
-          echo 'Live Worker did not report the expected v38 health payload.'
-          exit 1
+
+          EDGE="$(curl -fsS --max-time 15 "$BASE/bridge/health")"
+          echo "$EDGE"
+          printf '%s' "$EDGE" | grep -Fq '"kind":"cloud-edge-relay"'
+          printf '%s' "$EDGE" | grep -Fq '"verifier":false'
+
+          TEST_URL='https://raw.githubusercontent.com/free-nodes/v2rayfree/main/README.md'
+          CHECK="$(curl -fsS --max-time 20 "$BASE/source-check?url=$(python3 -c 'import urllib.parse; print(urllib.parse.quote("'"$TEST_URL"'", safe=""))')")"
+          echo "$CHECK"
+          printf '%s' "$CHECK" | grep -Fq '"ok":true'
+
+          RAW="$(curl -fsS --max-time 20 "$BASE/?url=$(python3 -c 'import urllib.parse; print(urllib.parse.quote("'"$TEST_URL"'", safe=""))')" | head -c 80)"
+          test -n "$RAW"
+          echo 'PASS: live v42 Worker health, Cloud Edge Relay semantics, source-check, and raw CORS relay.'
