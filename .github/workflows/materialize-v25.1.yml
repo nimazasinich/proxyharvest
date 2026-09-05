@@ -48,7 +48,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for f in index.html proxyharvest.html proxyharvest.js package.json vercel.json patches/ui-v26.js patches/ui-v26.css patches/auto-pipeline-v27.js patches/auto-pipeline-v27.css patches/layout-v28.css scripts/build.mjs api/ai/health.js api/ai/advise.js worker/proxyharvest-gateway.js; do
+          for f in index.html proxyharvest.html proxyharvest.js package.json vercel.json patches/ui-v26.js patches/ui-v26.css patches/auto-pipeline-v27.js patches/auto-pipeline-v27.css patches/layout-v28.css patches/layout-v31-1368.css scripts/build.mjs api/ai/health.js api/ai/advise.js worker/proxyharvest-gateway.js; do
             test -f "$f" || { echo "MISSING FILE: $f"; exit 1; }
             echo "FOUND FILE: $f"
           done
@@ -77,20 +77,20 @@ jobs:
           grep -Fq 'ph:v27-pipeline-complete' patches/auto-pipeline-v27.js
           echo 'PASS autonomous-pipeline-contract'
 
-      - name: Validate collision-proof responsive layout
+      - name: Validate canonical 1368x753 layout
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq 'ProxyHarvest V29' patches/layout-v28.css
-          grep -Fq 'width:100vw!important' patches/layout-v28.css
-          grep -Fq 'height:100dvh!important' patches/layout-v28.css
-          grep -Fq 'transform:none!important' patches/layout-v28.css
-          grep -Fq 'grid-template-columns:236px minmax(0,1fr)!important' patches/layout-v28.css
-          grep -Fq 'position:static!important' patches/layout-v28.css
-          grep -Fq 'overflow-x:hidden!important' patches/layout-v28.css
-          grep -Fq '#phv27AutoPipeline' patches/layout-v28.css
-          grep -Fq 'display:none!important' patches/layout-v28.css
-          echo 'PASS V29-collision-proof-layout'
+          grep -Fq 'ProxyHarvest V31' patches/layout-v31-1368.css
+          grep -Fq -- '--ph-canonical-w:1368px' patches/layout-v31-1368.css
+          grep -Fq -- '--ph-canonical-h:753px' patches/layout-v31-1368.css
+          grep -Fq 'grid-template-columns:212px minmax(0,1fr)!important' patches/layout-v31-1368.css
+          grep -Fq 'grid-template-columns:196px minmax(0,1fr) 236px!important' patches/layout-v31-1368.css
+          grep -Fq 'grid-template-rows:repeat(6,minmax(0,1fr))!important' patches/layout-v31-1368.css
+          grep -Fq 'grid-template-rows:72px 66px 96px 188px minmax(0,1fr)!important' patches/layout-v31-1368.css
+          grep -Fq 'overflow:hidden!important' patches/layout-v31-1368.css
+          grep -Fq 'data-proxyharvest-layout="v31-1368x753"' scripts/build.mjs
+          echo 'PASS V31-canonical-1368x753-layout'
 
       - name: Build deploy output
         shell: bash
@@ -105,13 +105,16 @@ jobs:
           test -f public/patches/auto-pipeline-v27.js
           test -f public/patches/auto-pipeline-v27.css
           test -f public/patches/layout-v28.css
+          test -f public/patches/layout-v31-1368.css
           test -f public/build.json
           grep -Fq 'data-proxyharvest-ui="v26"' public/index.html
           grep -Fq 'data-proxyharvest-pipeline="v27"' public/index.html
           grep -Fq 'data-proxyharvest-layout="v29"' public/index.html
-          grep -Fq 'patches/layout-v28.css' public/index.html
+          grep -Fq 'data-proxyharvest-layout="v31-1368x753"' public/index.html
+          grep -Fq 'patches/layout-v31-1368.css' public/index.html
           grep -Fq '"autoPipeline": "27.0.0-auto-pipeline"' public/build.json
-          grep -Fq '"layoutPatch": "29.0.0-collision-proof-responsive"' public/build.json
+          grep -Fq '"layoutPatch": "31.0.0-canonical-1368x753"' public/build.json
+          grep -Fq '"canonicalViewport": "1368x753"' public/build.json
           echo 'PASS deploy-output'
 
       - name: Truthful verification safety gate
@@ -130,4 +133,4 @@ jobs:
 
       - name: Summary
         run: |
-          echo "GitHub main is canonical: attachment UI/runtime + V26 UI + V27 autonomous pipeline + V29 collision-proof responsive shell + AI API + Worker source."
+          echo "GitHub main is canonical: attachment UI/runtime + V26 UI + V27 autonomous pipeline + V31 canonical 1368x753 dashboard + AI API + Worker source."
