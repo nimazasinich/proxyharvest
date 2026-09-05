@@ -48,7 +48,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for f in index.html proxyharvest.html proxyharvest.js package.json vercel.json patches/ui-v26.js patches/ui-v26.css patches/auto-pipeline-v27.js patches/auto-pipeline-v27.css patches/layout-v28.css patches/layout-v31-1368.css scripts/build.mjs api/ai/health.js api/ai/advise.js worker/proxyharvest-gateway.js; do
+          for f in index.html proxyharvest.html proxyharvest.js package.json vercel.json patches/ui-v26.js patches/ui-v26.css patches/auto-pipeline-v27.js patches/auto-pipeline-v27.css patches/layout-v28.css patches/layout-v31-1368.css patches/status-sync-v32.js patches/status-sync-v32.css scripts/build.mjs api/ai/health.js api/ai/advise.js worker/proxyharvest-gateway.js; do
             test -f "$f" || { echo "MISSING FILE: $f"; exit 1; }
             echo "FOUND FILE: $f"
           done
@@ -92,6 +92,24 @@ jobs:
           grep -Fq 'data-proxyharvest-layout="v31-1368x753"' scripts/build.mjs
           echo 'PASS V31-canonical-1368x753-layout'
 
+      - name: Validate V32 verification and export contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check patches/status-sync-v32.js
+          grep -Fq "const BUILD = '32.0.0-verification-sync'" patches/status-sync-v32.js
+          grep -Fq "p.tunnelVerified === true || p.protocolVerified === true" patches/status-sync-v32.js
+          grep -Fq "return 'reachable'" patches/status-sync-v32.js
+          grep -Fq "real-ping-unavailable" patches/status-sync-v32.js
+          grep -Fq 'bestVerified' patches/status-sync-v32.js
+          grep -Fq 'exportBestVerified' patches/status-sync-v32.js
+          grep -Fq 'ph:v32-verification-sync' patches/status-sync-v32.js
+          grep -Fq "localStorage.setItem('ph_strict_real_ping', opts.strictRealPing ? 'true' : 'false')" patches/status-sync-v32.js
+          grep -Fq 'ph:v32-verify-progress' patches/status-sync-v32.js
+          grep -Fq 'ph:v27-pipeline-complete' patches/status-sync-v32.js
+          grep -Fq 'data-proxyharvest-status="v32"' scripts/build.mjs
+          echo 'PASS V32-verification-export-dashboard-sync'
+
       - name: Build deploy output
         shell: bash
         run: |
@@ -106,14 +124,19 @@ jobs:
           test -f public/patches/auto-pipeline-v27.css
           test -f public/patches/layout-v28.css
           test -f public/patches/layout-v31-1368.css
+          test -f public/patches/status-sync-v32.js
+          test -f public/patches/status-sync-v32.css
           test -f public/build.json
           grep -Fq 'data-proxyharvest-ui="v26"' public/index.html
           grep -Fq 'data-proxyharvest-pipeline="v27"' public/index.html
           grep -Fq 'data-proxyharvest-layout="v29"' public/index.html
           grep -Fq 'data-proxyharvest-layout="v31-1368x753"' public/index.html
-          grep -Fq 'patches/layout-v31-1368.css' public/index.html
+          grep -Fq 'data-proxyharvest-status="v32"' public/index.html
+          grep -Fq 'patches/status-sync-v32.js' public/index.html
+          grep -Fq 'patches/status-sync-v32.css' public/index.html
           grep -Fq '"autoPipeline": "27.0.0-auto-pipeline"' public/build.json
           grep -Fq '"layoutPatch": "31.0.0-canonical-1368x753"' public/build.json
+          grep -Fq '"verificationSync": "32.0.0-verification-sync"' public/build.json
           grep -Fq '"canonicalViewport": "1368x753"' public/build.json
           echo 'PASS deploy-output'
 
@@ -129,8 +152,10 @@ jobs:
           grep -Fq 'Verified only' patches/ui-v26.js
           grep -Fq "setStage('verify', 'blocked'" patches/auto-pipeline-v27.js
           grep -Fq 'no reachable-only result is counted as LIVE' patches/auto-pipeline-v27.js
+          grep -Fq "if (p.tunnelVerified === true || p.protocolVerified === true) return 'verified'" patches/status-sync-v32.js
+          grep -Fq "if (p.bridgeReachable === true || p.workerReachable === true || p.browserReachable === true || c?.reachable === true) return 'reachable'" patches/status-sync-v32.js
           echo 'PASS truthful-verification'
 
       - name: Summary
         run: |
-          echo "GitHub main is canonical: attachment UI/runtime + V26 UI + V27 autonomous pipeline + V31 canonical 1368x753 dashboard + AI API + Worker source."
+          echo "GitHub main is canonical: attachment UI/runtime + V26 UI + V27 autonomous pipeline + V31 canonical 1368x753 dashboard + V32 verification sync/best export + AI API + Worker source."
