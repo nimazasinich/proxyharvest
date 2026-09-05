@@ -1,0 +1,76 @@
+name: Fix and Verify ProxyHarvest Runtime Stability
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/apply-runtime-stability-v39.mjs'
+      - 'scripts/runtime-stability-check.mjs'
+      - 'scripts/browser_stability_smoke.py'
+      - '.github/workflows/runtime-stability-v39.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: proxyharvest-runtime-stability-main
+  cancel-in-progress: false
+
+jobs:
+  patch-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Apply runtime stability patch
+        run: node scripts/apply-runtime-stability-v39.mjs
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Syntax and static stability gates
+        run: |
+          npm run check
+          node scripts/runtime-stability-check.mjs
+
+      - name: Build canonical output
+        run: npm run build
+
+      - name: Headless browser event-loop smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet websocket-client
+          python3 -m http.server 4173 --directory public >/tmp/proxyharvest-http.log 2>&1 &
+          HTTP_PID=$!
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME" || { echo 'Chrome/Chromium not found on runner'; exit 1; }
+          "$CHROME" --headless=new --no-sandbox --disable-gpu --disable-background-networking --remote-allow-origins='*' --remote-debugging-port=9222 --user-data-dir=/tmp/proxyharvest-chrome about:blank >/tmp/proxyharvest-chrome.log 2>&1 &
+          CHROME_PID=$!
+          cleanup() { kill "$CHROME_PID" "$HTTP_PID" 2>/dev/null || true; }
+          trap cleanup EXIT
+          timeout 20s python3 scripts/browser_stability_smoke.py
+
+      - name: Commit verified runtime fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.email "actions@github.com"
+          git config user.name "proxyharvest-runtime-stability-bot"
+          git add patches/runtime-smart-v38.js patches/status-sync-v32.js patches/auto-pipeline-v27.js patches/compact-interaction-v34.js patches/configs-density-v35.js patches/configs-row-v36.js patches/status-guard-v32.js scripts/build.mjs package.json .github/workflows/v38-runtime.yml
+          if git diff --cached --quiet; then
+            echo 'Runtime stability fix already applied.'
+            exit 0
+          fi
+          git commit -m "fix: eliminate runtime mutation loops and UI hangs"
+          git pull --rebase origin main
+          git push origin HEAD:main
