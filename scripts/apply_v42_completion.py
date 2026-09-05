@@ -69,7 +69,7 @@ def update_build_metadata() -> None:
     text = text.replace('42.0.0-auto-control-center', '42.0.1-auto-control-center')
     text = text.replace('42.0.0-github-main-auto-control-center', '42.0.1-github-main-auto-control-center')
     if 'source sweep renders inside every batch' not in text:
-        text += "\nassert(!v42.includes(\"runtime.sourceHealthy=good;runtime.sourceChecked=checked;runtime.sourceTotal=sources.length;render();\"), 'V42 source sweep renders inside every batch');\nassert(!v42.includes(\"runtime.worker='checking';runtime.edge='checking';render();\"), 'V42 worker audit performs redundant intermediate render');\nassert(!v42.includes(\"runtime.bridge='checking';render();\"), 'V42 bridge audit performs redundant intermediate render');\nassert(!v42.includes(\"runtime.ai='checking';render();\"), 'V42 AI audit performs redundant intermediate render');\n"
+        text += "\nassert(!v42.includes(\"runtime.sourceHealthy=good;runtime.sourceChecked=checked;runtime.sourceTotal=sources.length;render();\"), 'V42 source sweep renders inside every batch');\nassert(!v42.includes(\"async function workerAudit(){\\n    runtime.worker='checking';runtime.edge='checking';render();\"), 'V42 worker audit performs redundant intermediate render');\nassert(!v42.includes(\"async function bridgeAudit(){\\n    runtime.bridge='checking';render();\"), 'V42 bridge audit performs redundant intermediate render');\nassert(!v42.includes(\"async function aiAudit(){\\n    runtime.ai='checking';render();\"), 'V42 AI audit performs redundant intermediate render');\n"
     p.write_text(text, encoding='utf-8')
 
 
