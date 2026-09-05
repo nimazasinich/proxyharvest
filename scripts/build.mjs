@@ -28,12 +28,8 @@ const assets = {
 
 function inject(html) {
   let out = html;
-  for (const asset of assets.css) {
-    if (!out.includes(asset.path)) out = out.includes('</head>') ? out.replace('</head>', `${asset.tag}\n</head>`) : `${asset.tag}\n${out}`;
-  }
-  for (const asset of assets.js) {
-    if (!out.includes(asset.path)) out = out.includes('</body>') ? out.replace('</body>', `${asset.tag}\n</body>`) : `${out}\n${asset.tag}`;
-  }
+  for (const asset of assets.css) if (!out.includes(asset.path)) out = out.includes('</head>') ? out.replace('</head>', `${asset.tag}\n</head>`) : `${asset.tag}\n${out}`;
+  for (const asset of assets.js) if (!out.includes(asset.path)) out = out.includes('</body>') ? out.replace('</body>', `${asset.tag}\n</body>`) : `${out}\n${asset.tag}`;
   return out;
 }
 
@@ -62,7 +58,7 @@ const manifest = {
   configsDensity: '35.0.0-configs-density',
   configsRow: '36.0.0-single-line-rows',
   workspaceBalance: '37.0.0-row-splitnet-shared-contrast',
-  smartRuntime: '38.0.0-smart-runtime',
+  smartRuntime: '38.1.0-smart-runtime',
   bridge: '38.0.0-local-real-test-bridge',
   aiProvider: 'huggingface-inference-providers',
   canonicalViewport: '1368x753',
