@@ -74,7 +74,9 @@ jobs:
           grep -Fq "PH_V26_MUTATION_STABILITY = '40.0.0'" patches/ui-v26.js
           grep -Fq "PH_V27_MUTATION_STABILITY = '40.0.0'" patches/auto-pipeline-v27.js
           grep -Fq "PH_V32_MUTATION_STABILITY = '40.0.0'" patches/status-sync-v32.js
-          grep -Fq "PH_V34_MUTATION_STABILITY = '40.0.0'" patches/compact-interaction-v34.js
+          grep -Fq "PH_V34_MUTATION_STABILITY = '40.0.1'" patches/compact-interaction-v34.js
+          grep -Fq "syncFetchingState();" patches/compact-interaction-v34.js
+          grep -Fq "guardUnexpectedTesting();" patches/compact-interaction-v34.js
           grep -Fq "PH_V38_STATE_STABILITY = '40.0.0'" patches/runtime-smart-v38.js
           grep -Fq "runtimeState()?.configs" patches/runtime-smart-v38.js
 
@@ -113,7 +115,6 @@ jobs:
           set -euo pipefail
           git config user.email "actions@github.com"
           git config user.name "proxyharvest-runtime-stability-bot"
-          # Do not stage workflow files here: GitHub App workflow tokens cannot push workflow-file changes.
           git add proxyharvest.js patches/ui-v26.js patches/runtime-smart-v38.js patches/status-sync-v32.js patches/auto-pipeline-v27.js patches/compact-interaction-v34.js patches/configs-density-v35.js patches/configs-row-v36.js patches/status-guard-v32.js scripts/apply_mutation_loop_v40.py scripts/apply_status_sync_v40.py scripts/apply_v34_mutation_v40.py scripts/apply_v38_state_v40.py scripts/build.mjs package.json
           if git diff --cached --quiet; then
             echo 'Runtime stability fix already applied.'
