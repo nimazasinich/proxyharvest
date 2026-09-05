@@ -1,0 +1,82 @@
+name: Deploy ProxyHarvest Cloudflare Worker
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'worker/proxyharvest-gateway.js'
+      - '.github/workflows/deploy-cloudflare-worker.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: proxyharvest-cloudflare-worker
+  cancel-in-progress: true
+
+jobs:
+  deploy-worker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate current gateway source
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check worker/proxyharvest-gateway.js
+          grep -Fq "cloudflare:sockets" worker/proxyharvest-gateway.js
+          grep -Fq "ProxyHarvest Worker Gateway v38" worker/proxyharvest-gateway.js
+          grep -Fq "raw-tcp-tls" worker/proxyharvest-gateway.js
+          if grep -Fq "ALLOWED_HOSTS" worker/proxyharvest-gateway.js; then
+            echo "Legacy fixed allowlist detected; refusing deployment."
+            exit 1
+          fi
+
+      - name: Require Cloudflare API token
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "CLOUDFLARE_API_TOKEN GitHub Actions secret is missing."
+            echo "Add it to the repository Actions secrets, then re-run this workflow."
+            exit 2
+          fi
+
+      - name: Deploy proxyharvest-gateway
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          EXTRA=()
+          if [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+            EXTRA+=(--account-id "$CLOUDFLARE_ACCOUNT_ID")
+          fi
+          npx --yes wrangler@latest deploy worker/proxyharvest-gateway.js \
+            --name proxyharvest-gateway \
+            --compatibility-date 2026-09-05 \
+            "${EXTRA[@]}"
+
+      - name: Verify live Worker health
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL='https://proxyharvest-gateway.amin-chinisaz-edu.workers.dev/health'
+          for attempt in 1 2 3 4 5 6; do
+            BODY="$(curl -fsS --max-time 15 "$URL" || true)"
+            echo "$BODY"
+            if printf '%s' "$BODY" | grep -Fq 'ProxyHarvest Worker Gateway v38' \
+              && printf '%s' "$BODY" | grep -Fq 'raw-tcp-tls'; then
+              echo 'PASS: live Worker matches repository v38 raw TCP/TLS gateway.'
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'Live Worker did not report the expected v38 health payload.'
+          exit 1
