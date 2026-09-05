@@ -4,13 +4,13 @@ ROOT = Path(__file__).resolve().parents[1]
 PATH = ROOT / 'patches/compact-interaction-v34.js'
 s = PATH.read_text(encoding='utf-8')
 
-if "const PH_V34_MUTATION_STABILITY = '40.0.1'" in s:
+if "const PH_V34_MUTATION_STABILITY = '40.0.2'" in s:
     print('V34 mutation stability patch already applied')
     raise SystemExit(0)
 
 s = s.replace(
     "  const PH_V34_RUNTIME_STABILITY = '39.0.0';",
-    "  const PH_V34_RUNTIME_STABILITY = '39.0.0';\n  const PH_V34_MUTATION_STABILITY = '40.0.1';",
+    "  const PH_V34_RUNTIME_STABILITY = '39.0.0';\n  const PH_V34_MUTATION_STABILITY = '40.0.2';\n  let implicitStopIssued = false;",
     1,
 )
 
@@ -49,6 +49,32 @@ new = '''  function setRunState(state, text) {
   }'''
 if s.count(old) != 1:
     raise RuntimeError('V34 setRunState anchor mismatch')
+s = s.replace(old, new, 1)
+
+old = '''  function guardUnexpectedTesting() {
+    const running = window.RealTestEngine?.isRunning === true;
+    if (!running) return;
+    if (sessionArmed || manualTestRequested) return;
+    try { window.stopRealTest?.(); } catch {}
+    setRunState('idle', 'Blocked an implicit verification start · click Fetch or a Test button to run it.');
+  }'''
+new = '''  function guardUnexpectedTesting() {
+    const running = window.RealTestEngine?.isRunning === true;
+    if (!running) {
+      implicitStopIssued = false;
+      return;
+    }
+    if (sessionArmed || manualTestRequested) {
+      implicitStopIssued = false;
+      return;
+    }
+    if (implicitStopIssued) return;
+    implicitStopIssued = true;
+    try { window.stopRealTest?.(); } catch {}
+    setRunState('idle', 'Blocked an implicit verification start · click Fetch or a Test button to run it.');
+  }'''
+if s.count(old) != 1:
+    raise RuntimeError('V34 guardUnexpectedTesting anchor mismatch')
 s = s.replace(old, new, 1)
 
 old = '''  function normalizeIdleUI() {
@@ -97,4 +123,4 @@ if s.count(old) != 1:
 s = s.replace(old, new, 1)
 
 PATH.write_text(s, encoding='utf-8')
-print('Applied V34 mutation-idempotence patch 40.0.1')
+print('Applied V34 mutation-idempotence patch 40.0.2')
