@@ -21,7 +21,6 @@ jobs:
     environment: Production
     timeout-minutes: 15
     env:
-      VERCEL_SCOPE: team_tgCTfev6a9dYgjXVMHGmvtKl
       VERCEL_PROJECT: proxyharvest
       DEFAULT_HF_MODEL: Qwen/Qwen2.5-7B-Instruct-1M:fastest
     steps:
@@ -49,74 +48,180 @@ jobs:
           if [ -z "${HF_TOKEN:-}" ]; then echo 'Hugging Face token GitHub Actions secret is missing.'; missing=1; fi
           if [ "$missing" -eq 0 ]; then
             echo 'ready=true' >> "$GITHUB_OUTPUT"
-            echo 'Credentials are present; continuing with Vercel environment sync.'
+            echo 'Credentials are present; continuing with Vercel REST sync.'
           else
             echo 'ready=false' >> "$GITHUB_OUTPUT"
             echo 'Environment sync is blocked until the missing GitHub Actions secret(s) are available.'
           fi
 
-      - name: Link Vercel project
+      - name: Verify Vercel REST project access
+        id: project
         if: steps.creds.outputs.ready == 'true'
         shell: bash
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           set -euo pipefail
-          npx --yes vercel@latest link --yes \
-            --project "$VERCEL_PROJECT" \
-            --scope "$VERCEL_SCOPE" \
-            --token "$VERCEL_TOKEN"
+          tmp="$(mktemp)"
+          code="$(curl -sS -o "$tmp" -w '%{http_code}' \
+            -H "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v10/projects?search=$VERCEL_PROJECT")"
+          echo "Vercel project lookup HTTP $code"
+          if [[ "$code" != 2* ]]; then
+            cat "$tmp"
+            exit 1
+          fi
+          project_id="$(node - "$tmp" "$VERCEL_PROJECT" <<'NODE'
+          const fs = require('fs');
+          const [file, wanted] = process.argv.slice(2);
+          const j = JSON.parse(fs.readFileSync(file, 'utf8'));
+          const p = (j.projects || []).find(x => x.name === wanted) || (j.projects || [])[0];
+          if (!p?.id) process.exit(2);
+          process.stdout.write(p.id);
+NODE
+          )"
+          echo "project_id=$project_id" >> "$GITHUB_OUTPUT"
+          echo "PASS: Vercel REST can access project $VERCEL_PROJECT ($project_id)."
 
       - name: Upsert HF_TOKEN in Production and Preview
-        if: steps.creds.outputs.ready == 'true'
+        if: steps.creds.outputs.ready == 'true' && steps.project.outputs.project_id != ''
         shell: bash
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           HF_TOKEN: ${{ secrets.HF_TOKEN || secrets.huggingfacetoken }}
+          PROJECT_ID: ${{ steps.project.outputs.project_id }}
         run: |
           set -euo pipefail
-          for target in production preview; do
-            if npx --yes vercel@latest env ls "$target" --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN" 2>/dev/null | grep -Eq '(^|[[:space:]])HF_TOKEN([[:space:]]|$)'; then
-              printf '%s' "$HF_TOKEN" | npx --yes vercel@latest env update HF_TOKEN "$target" --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN"
-            else
-              printf '%s' "$HF_TOKEN" | npx --yes vercel@latest env add HF_TOKEN "$target" --sensitive --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN"
-            fi
-          done
+          payload="$(jq -cn --arg value "$HF_TOKEN" '{key:"HF_TOKEN",value:$value,type:"encrypted",target:["production","preview"]}')"
+          tmp="$(mktemp)"
+          code="$(curl -sS -o "$tmp" -w '%{http_code}' -X POST \
+            -H "Authorization: Bearer $VERCEL_TOKEN" \
+            -H 'Content-Type: application/json' \
+            --data "$payload" \
+            "https://api.vercel.com/v10/projects/$PROJECT_ID/env?upsert=true")"
+          echo "HF_TOKEN upsert HTTP $code"
+          if [[ "$code" != 2* ]]; then cat "$tmp"; exit 1; fi
+          echo 'PASS: HF_TOKEN upserted for production and preview.'
 
       - name: Ensure default HF_MODEL
-        if: steps.creds.outputs.ready == 'true'
+        if: steps.creds.outputs.ready == 'true' && steps.project.outputs.project_id != ''
         shell: bash
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          PROJECT_ID: ${{ steps.project.outputs.project_id }}
         run: |
           set -euo pipefail
-          for target in production preview; do
-            if ! npx --yes vercel@latest env ls "$target" --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN" 2>/dev/null | grep -Eq '(^|[[:space:]])HF_MODEL([[:space:]]|$)'; then
-              printf '%s' "$DEFAULT_HF_MODEL" | npx --yes vercel@latest env add HF_MODEL "$target" --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN"
-            fi
-          done
+          payload="$(jq -cn --arg value "$DEFAULT_HF_MODEL" '{key:"HF_MODEL",value:$value,type:"plain",target:["production","preview"]}')"
+          tmp="$(mktemp)"
+          code="$(curl -sS -o "$tmp" -w '%{http_code}' -X POST \
+            -H "Authorization: Bearer $VERCEL_TOKEN" \
+            -H 'Content-Type: application/json' \
+            --data "$payload" \
+            "https://api.vercel.com/v10/projects/$PROJECT_ID/env?upsert=true")"
+          echo "HF_MODEL upsert HTTP $code"
+          if [[ "$code" != 2* ]]; then cat "$tmp"; exit 1; fi
+          echo 'PASS: HF_MODEL configured for production and preview.'
 
-      - name: Redeploy Production
-        id: deploy
-        if: steps.creds.outputs.ready == 'true'
+      - name: Resolve latest Production deployment
+        id: previous
+        if: steps.creds.outputs.ready == 'true' && steps.project.outputs.project_id != ''
         shell: bash
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          PROJECT_ID: ${{ steps.project.outputs.project_id }}
         run: |
           set -euo pipefail
-          url="$(npx --yes vercel@latest deploy --prod --yes --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN" | tail -n 1)"
-          echo "url=$url" >> "$GITHUB_OUTPUT"
-          echo "Production deployment: $url"
+          tmp="$(mktemp)"
+          code="$(curl -sS -o "$tmp" -w '%{http_code}' \
+            -H "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v7/deployments?projectId=$PROJECT_ID&target=production&limit=1")"
+          echo "Production deployment lookup HTTP $code"
+          if [[ "$code" != 2* ]]; then cat "$tmp"; exit 1; fi
+          deployment_id="$(node - "$tmp" <<'NODE'
+          const fs = require('fs');
+          const j = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          const d = (j.deployments || [])[0];
+          const id = d?.uid || d?.id;
+          if (!id) process.exit(2);
+          process.stdout.write(id);
+NODE
+          )"
+          echo "deployment_id=$deployment_id" >> "$GITHUB_OUTPUT"
+          echo "PASS: resolved existing production deployment $deployment_id."
+
+      - name: Redeploy Production via REST
+        id: deploy
+        if: steps.creds.outputs.ready == 'true' && steps.previous.outputs.deployment_id != ''
+        shell: bash
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          PROJECT_ID: ${{ steps.project.outputs.project_id }}
+          PREVIOUS_DEPLOYMENT_ID: ${{ steps.previous.outputs.deployment_id }}
+        run: |
+          set -euo pipefail
+          payload="$(jq -cn --arg name "$VERCEL_PROJECT" --arg project "$PROJECT_ID" --arg deploymentId "$PREVIOUS_DEPLOYMENT_ID" '{name:$name,project:$project,deploymentId:$deploymentId,target:"production"}')"
+          tmp="$(mktemp)"
+          code="$(curl -sS -o "$tmp" -w '%{http_code}' -X POST \
+            -H "Authorization: Bearer $VERCEL_TOKEN" \
+            -H 'Content-Type: application/json' \
+            --data "$payload" \
+            'https://api.vercel.com/v13/deployments?forceNew=1')"
+          echo "Production redeploy HTTP $code"
+          if [[ "$code" != 2* ]]; then cat "$tmp"; exit 1; fi
+          deployment_id="$(node - "$tmp" <<'NODE'
+          const fs = require('fs');
+          const j = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          if (!j.id && !j.uid) process.exit(2);
+          process.stdout.write(j.id || j.uid);
+NODE
+          )"
+          deployment_url="$(node - "$tmp" <<'NODE'
+          const fs = require('fs');
+          const j = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          if (!j.url) process.exit(2);
+          process.stdout.write(j.url);
+NODE
+          )"
+          echo "deployment_id=$deployment_id" >> "$GITHUB_OUTPUT"
+          echo "deployment_url=$deployment_url" >> "$GITHUB_OUTPUT"
+          echo "Production deployment created: https://$deployment_url"
+
+      - name: Wait for Production deployment
+        if: steps.creds.outputs.ready == 'true' && steps.deploy.outputs.deployment_id != ''
+        shell: bash
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          DEPLOYMENT_ID: ${{ steps.deploy.outputs.deployment_id }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 40); do
+            tmp="$(mktemp)"
+            code="$(curl -sS -o "$tmp" -w '%{http_code}' \
+              -H "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v13/deployments/$DEPLOYMENT_ID")"
+            if [[ "$code" != 2* ]]; then cat "$tmp"; exit 1; fi
+            state="$(node - "$tmp" <<'NODE'
+            const fs = require('fs');
+            const j = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+            process.stdout.write(j.readyState || j.state || 'UNKNOWN');
+NODE
+            )"
+            echo "Deployment state: $state"
+            if [ "$state" = READY ]; then exit 0; fi
+            if [ "$state" = ERROR ] || [ "$state" = CANCELED ] || [ "$state" = BLOCKED ]; then cat "$tmp"; exit 1; fi
+            sleep 5
+          done
+          echo 'Deployment did not reach READY before timeout.'
+          exit 1
 
       - name: Verify deep AI health
-        if: steps.creds.outputs.ready == 'true'
+        if: steps.creds.outputs.ready == 'true' && steps.deploy.outputs.deployment_url != ''
         shell: bash
         env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment_url }}
         run: |
           set -euo pipefail
-          url='${{ steps.deploy.outputs.url }}'
-          body="$(npx --yes vercel@latest curl '/api/ai/health?deep=1' --deployment "$url" --scope "$VERCEL_SCOPE" --token "$VERCEL_TOKEN")"
+          body="$(curl -fsS --max-time 30 "https://$DEPLOYMENT_URL/api/ai/health?deep=1")"
           echo "$body"
           printf '%s' "$body" | grep -Fq '"mode":"huggingface-provider"'
           printf '%s' "$body" | grep -Fq '"loaded":true'
