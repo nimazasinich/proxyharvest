@@ -71,15 +71,12 @@ jobs:
             cat "$tmp"
             exit 1
           fi
-          project_id="$(node - "$tmp" "$VERCEL_PROJECT" <<'NODE'
-          const fs = require('fs');
-          const [file, wanted] = process.argv.slice(2);
-          const j = JSON.parse(fs.readFileSync(file, 'utf8'));
-          const p = (j.projects || []).find(x => x.name === wanted) || (j.projects || [])[0];
-          if (!p?.id) process.exit(2);
-          process.stdout.write(p.id);
-NODE
-          )"
+          project_id="$(jq -r --arg wanted "$VERCEL_PROJECT" '([.projects[]? | select(.name == $wanted)][0] // .projects[0] // {}) | .id // empty' "$tmp")"
+          if [ -z "$project_id" ]; then
+            echo 'Vercel API returned no matching project.'
+            cat "$tmp"
+            exit 1
+          fi
           echo "project_id=$project_id" >> "$GITHUB_OUTPUT"
           echo "PASS: Vercel REST can access project $VERCEL_PROJECT ($project_id)."
 
@@ -137,15 +134,12 @@ NODE
             "https://api.vercel.com/v7/deployments?projectId=$PROJECT_ID&target=production&limit=1")"
           echo "Production deployment lookup HTTP $code"
           if [[ "$code" != 2* ]]; then cat "$tmp"; exit 1; fi
-          deployment_id="$(node - "$tmp" <<'NODE'
-          const fs = require('fs');
-          const j = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
-          const d = (j.deployments || [])[0];
-          const id = d?.uid || d?.id;
-          if (!id) process.exit(2);
-          process.stdout.write(id);
-NODE
-          )"
+          deployment_id="$(jq -r '(.deployments[0].uid // .deployments[0].id // empty)' "$tmp")"
+          if [ -z "$deployment_id" ]; then
+            echo 'No production deployment was returned.'
+            cat "$tmp"
+            exit 1
+          fi
           echo "deployment_id=$deployment_id" >> "$GITHUB_OUTPUT"
           echo "PASS: resolved existing production deployment $deployment_id."
 
@@ -168,20 +162,13 @@ NODE
             'https://api.vercel.com/v13/deployments?forceNew=1')"
           echo "Production redeploy HTTP $code"
           if [[ "$code" != 2* ]]; then cat "$tmp"; exit 1; fi
-          deployment_id="$(node - "$tmp" <<'NODE'
-          const fs = require('fs');
-          const j = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
-          if (!j.id && !j.uid) process.exit(2);
-          process.stdout.write(j.id || j.uid);
-NODE
-          )"
-          deployment_url="$(node - "$tmp" <<'NODE'
-          const fs = require('fs');
-          const j = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
-          if (!j.url) process.exit(2);
-          process.stdout.write(j.url);
-NODE
-          )"
+          deployment_id="$(jq -r '(.id // .uid // empty)' "$tmp")"
+          deployment_url="$(jq -r '(.url // empty)' "$tmp")"
+          if [ -z "$deployment_id" ] || [ -z "$deployment_url" ]; then
+            echo 'Redeploy response lacked deployment id or url.'
+            cat "$tmp"
+            exit 1
+          fi
           echo "deployment_id=$deployment_id" >> "$GITHUB_OUTPUT"
           echo "deployment_url=$deployment_url" >> "$GITHUB_OUTPUT"
           echo "Production deployment created: https://$deployment_url"
@@ -200,12 +187,7 @@ NODE
               -H "Authorization: Bearer $VERCEL_TOKEN" \
               "https://api.vercel.com/v13/deployments/$DEPLOYMENT_ID")"
             if [[ "$code" != 2* ]]; then cat "$tmp"; exit 1; fi
-            state="$(node - "$tmp" <<'NODE'
-            const fs = require('fs');
-            const j = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
-            process.stdout.write(j.readyState || j.state || 'UNKNOWN');
-NODE
-            )"
+            state="$(jq -r '(.readyState // .state // "UNKNOWN")' "$tmp")"
             echo "Deployment state: $state"
             if [ "$state" = READY ]; then exit 0; fi
             if [ "$state" = ERROR ] || [ "$state" = CANCELED ] || [ "$state" = BLOCKED ]; then cat "$tmp"; exit 1; fi
