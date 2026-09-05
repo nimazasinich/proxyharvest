@@ -1,3 +1,4 @@
+# retrigger: fresh secret-scope verification 2026-09-05
 name: Deploy ProxyHarvest Cloudflare Worker
 
 on:
