@@ -7065,17 +7065,25 @@ const PH_UX = (() => {
     syncActivity();
   }
 
+  const PH_MUTATION_STABILITY_V40 = '40.0.0';
   function syncActivity() {
     const app = byId('phActApp');
     const prog = byId('phActProgress');
     const db = byId('phActDb');
     const bridge = byId('phActBridge');
-    if (app) app.textContent = byId('statusText')?.textContent || (S?.fetchRunning ? 'Fetching' : 'Idle');
-    if (prog) prog.textContent = byId('progCount')?.textContent || byId('realTestStatus')?.textContent || '0 / 0';
-    if (db) db.textContent = (byId('dbStatusText')?.textContent || 'Unknown').replace(/^IndexedDB:\s*/,'').slice(0,42);
+    const setMirror = (el, value) => {
+      if (!el) return false;
+      const next = String(value ?? '');
+      if (el.textContent === next) return false;
+      el.textContent = next;
+      return true;
+    };
+    setMirror(app, byId('statusText')?.textContent || (S?.fetchRunning ? 'Fetching' : 'Idle'));
+    setMirror(prog, byId('progCount')?.textContent || byId('realTestStatus')?.textContent || '0 / 0');
+    setMirror(db, (byId('dbStatusText')?.textContent || 'Unknown').replace(/^IndexedDB:\s*/, '').slice(0, 42));
     if (bridge) {
       const b = (byId('localBridgeUrl')?.value || PH_STORAGE.get('ph_real_ping_bridge') || '').trim();
-      bridge.textContent = b ? (String(b).includes('127.0.0.1') ? 'Local 8787' : 'Configured') : 'Optional';
+      setMirror(bridge, b ? (String(b).includes('127.0.0.1') ? 'Local 8787' : 'Configured') : 'Optional');
     }
   }
 

@@ -17,7 +17,7 @@ def sub_once(text, pattern, replacement, label, flags=0):
     matches = list(rx.finditer(text))
     if len(matches) != 1:
         raise RuntimeError(f'{label}: expected exactly one match, got {len(matches)}')
-    return rx.sub(replacement, text, count=1)
+    return rx.sub(lambda _m: replacement, text, count=1)
 
 
 def patch_core():

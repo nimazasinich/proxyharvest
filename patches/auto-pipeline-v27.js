@@ -3,6 +3,7 @@
 
   const BUILD = '27.0.0-auto-pipeline';
   const STORAGE_KEY = 'ph_auto_pipeline_enabled';
+  const PH_V27_MUTATION_STABILITY = '40.0.0';
   const state = () => window.PH_STATE || null;
   const $ = (s, r = document) => r.querySelector(s);
   const clamp = (n, min, max) => Math.max(min, Math.min(max, Number(n) || 0));
@@ -14,8 +15,10 @@
     try { localStorage.setItem(STORAGE_KEY, value ? '1' : '0'); } catch {}
     const btn = $('#phv27Toggle');
     if (btn) {
-      btn.dataset.on = value ? '1' : '0';
-      btn.textContent = value ? 'AUTO PIPELINE ON' : 'AUTO PIPELINE OFF';
+      const on = value ? '1' : '0';
+      const text = value ? 'AUTO PIPELINE ON' : 'AUTO PIPELINE OFF';
+      if (btn.dataset.on !== on) btn.dataset.on = on;
+      if (btn.textContent !== text) btn.textContent = text;
     }
   };
   const toast = (message, type = 'info') => {
@@ -148,19 +151,20 @@
   function setStage(name, status, detail = '') {
     const step = document.querySelector(`[data-phv27-stage="${name}"]`);
     if (step) {
-      step.dataset.status = status;
+      if (step.dataset.status !== status) step.dataset.status = status;
       const small = step.querySelector('small');
-      if (small && detail) small.textContent = detail;
+      if (small && detail && small.textContent !== detail) small.textContent = detail;
     }
     const label = $('#phv27PipelineStatus');
-    if (label) label.textContent = detail || `${name}: ${status}`;
+    const next = detail || `${name}: ${status}`;
+    if (label && label.textContent !== next) label.textContent = next;
   }
 
   function resetStages() {
     document.querySelectorAll('[data-phv27-stage]').forEach(el => {
-      el.dataset.status = 'queued';
+      if (el.dataset.status !== 'queued') el.dataset.status = 'queued';
       const small = el.querySelector('small');
-      if (small) small.textContent = 'Queued';
+      if (small && small.textContent !== 'Queued') small.textContent = 'Queued';
     });
   }
 

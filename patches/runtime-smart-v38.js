@@ -14,6 +14,8 @@
   const failed = (c) => !verified(c) && !reachable(c) && (c?.live === false || c?.probe?.protocolVerified === false || c?.probe?.tunnelVerified === false);
   const score = (c) => Number(c?.score || 0);
   const latency = (c) => Number(c?.probe?.latencyMs ?? c?.latency ?? 999999);
+  const PH_V38_STATE_STABILITY = '40.0.0';
+  const runtimeState = () => window.PH_STATE || window.S || null;
   const fresh = (c) => { const ts=Number(c?.probe?.testedAt||c?.testedAt||0); return ts>0 && Date.now()-ts<86400000; };
   function toast(msg,type='info'){ try { window.toast?.(msg,type); } catch {} }
   function setValue(id,value){ const el=document.getElementById(id); if(!el)return false; const next=el.type==='checkbox'?!!value:String(value??''); const current=el.type==='checkbox'?!!el.checked:String(el.value??''); if(current===next)return false; if(el.type==='checkbox')el.checked=next; else el.value=next; el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true})); return true; }
@@ -75,9 +77,9 @@
   function exportUri(c){try{if(typeof window.getExportUri==='function')return window.getExportUri(c,{allowSensitive:false})||''}catch{}return typeof c?.raw==='string'&&!/REDACTED|\*\*\*/i.test(c.raw)?c.raw:''}
   function rank(list){return[...list].sort((a,b)=>Number(verified(b))-Number(verified(a))||score(b)-score(a)||latency(a)-latency(b))}
   function bestFrom(list,limit=100){return rank((list||[]).filter(c=>verified(c)&&score(c)>=BEST_SCORE&&fresh(c)&&exportUri(c))).slice(0,limit)}
-  function bestVerified(limit=100){return bestFrom(window.S?.configs||[],limit)}
-  function bestReachable(limit=100){return rank((window.S?.configs||[]).filter(c=>reachable(c)&&!failed(c)&&score(c)>=BEST_SCORE&&latency(c)<=BEST_LATENCY&&fresh(c)&&exportUri(c))).slice(0,limit)}
-  function bestSplitVerified(limit=100){return bestFrom(window.S?.splitnetConfigs||[],limit)}
+  function bestVerified(limit=100){return bestFrom(runtimeState()?.configs||[],limit)}
+  function bestReachable(limit=100){return rank((runtimeState()?.configs||[]).filter(c=>reachable(c)&&!failed(c)&&score(c)>=BEST_SCORE&&latency(c)<=BEST_LATENCY&&fresh(c)&&exportUri(c))).slice(0,limit)}
+  function bestSplitVerified(limit=100){return bestFrom(runtimeState()?.splitnetConfigs||[],limit)}
   function download(name,list){const text=list.map(exportUri).filter(Boolean).join('\n');if(!text){toast('No eligible configs for this export','warn');return 0}const blob=new Blob([text+'\n'],{type:'text/plain;charset=utf-8'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500);toast(`${list.length} configs exported`,'ok');return list.length}
   function installBestExports(){
     const tab=document.getElementById('tab-configs');if(tab&&!tab.querySelector('#ph38BestCandidates')){const anchor=tab.querySelector('.cfgs-action-bar')||tab.querySelector('.phv26-subnav');if(anchor){const box=document.createElement('div');box.id='ph38BestCandidates';box.className='ph38-best-actions';box.innerHTML='<button data-kind="verified">BEST VERIFIED</button><button data-kind="reachable">BEST REACHABLE</button><span>Reachable = candidate only.</span>';box.addEventListener('click',e=>{const b=e.target.closest('button[data-kind]');if(!b)return;b.dataset.kind==='verified'?download('proxyharvest-best-verified.txt',bestVerified()):download('proxyharvest-best-reachable-candidates.txt',bestReachable())});anchor.appendChild(box)}}
@@ -92,7 +94,8 @@
     setValue('cfg-force-worker',false);setValue('cfg-use-clean-ip',false);setValue('cfg-doh-via-worker',false);setValue('cfg-scoreThreshold',70);setValue('cfg-scoreThresholdSettings',70);sanitizeTokenFields();
   }
   function installSmartButtons(){const infra=document.getElementById('tab-infrastructure');if(infra&&!infra.querySelector('#ph38SmartInfra')){const btn=document.createElement('button');btn.id='ph38SmartInfra';btn.className='ph38-smart-btn';btn.textContent='SMART DEFAULTS + HEALTH CHECK';btn.onclick=async()=>{applySmartInfrastructureDefaults();fixInfrastructureFields();await runtimeAudit({deepAI:true})};infra.prepend(btn)}const settings=document.getElementById('tab-settings');if(settings&&!settings.querySelector('#ph38BridgeCmd')){const note=document.createElement('div');note.id='ph38BridgeCmd';note.className='ph38-bridge-note';note.innerHTML='<b>Real verification:</b> run <code>npm run bridge</code>. The UI auto-detects <code>127.0.0.1:8787</code>. With sing-box + curl, VLESS/Trojan/VMess/WireGuard candidates are checked through an actual local tunnel.';settings.prepend(note)}}
-  function syncCounts(){const arr=window.S?.configs||[],c={v:0,r:0,u:0,f:0};for(const x of arr){if(verified(x))c.v++;else if(reachable(x))c.r++;else if(failed(x))c.f++;else c.u++}setText('phMetricVerified',c.v);setText('phMetricReachable',c.r);setText('phMetricUntested',c.u);setText('phMetricFailed',c.f);return c}
+  const PH_V38_COUNT_STABILITY = '41.0.0';
+  function syncCounts(){const arr=runtimeState()?.configs||[];let c=null;try{const canonical=window.PROXYHARVEST_V32?.counts?.(arr);if(canonical)c={v:Number(canonical.verified)||0,r:Number(canonical.reachable)||0,u:Number(canonical.untested)||0,f:Number(canonical.failed)||0}}catch{}if(!c){c={v:0,r:0,u:0,f:0};for(const x of arr){if(verified(x))c.v++;else if(reachable(x))c.r++;else if(failed(x))c.f++;else c.u++}}setText('phMetricVerified',c.v);setText('phMetricReachable',c.r);setText('phMetricUntested',c.u);setText('phMetricFailed',c.f);return c}
   function boot(){
     migrateAppSettings();
     applySmartInfrastructureDefaults();

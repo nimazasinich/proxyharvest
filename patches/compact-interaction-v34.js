@@ -11,6 +11,8 @@
   let manualTestRequested = false;
   let currentRun = 'idle';
   const PH_V34_RUNTIME_STABILITY = '39.0.0';
+  const PH_V34_MUTATION_STABILITY = '40.0.2';
+  let implicitStopIssued = false;
 
   function setAutoEnabled(on) {
     try { localStorage.setItem(AUTO_KEY, on ? '1' : '0'); } catch {}
@@ -19,11 +21,11 @@
 
   function setRunState(state, text) {
     currentRun = state;
-    document.body.dataset.phv34Run = state;
+    if (document.body.dataset.phv34Run !== state) document.body.dataset.phv34Run = state;
     const notice = $('#phv34SessionNotice');
     if (notice) {
-      notice.dataset.state = state;
-      notice.textContent = text || ({
+      if (notice.dataset.state !== state) notice.dataset.state = state;
+      const next = text || ({
         idle: 'Previous evidence may be visible · no test is running in this session.',
         armed: 'Fetch requested · verification starts only after this harvest finishes.',
         fetching: 'Harvesting sources…',
@@ -31,6 +33,7 @@
         done: 'Run completed · counters show the latest stored evidence.',
         stopped: 'Run stopped by user.'
       }[state] || 'Ready.');
+      if (notice.textContent !== next) notice.textContent = next;
     }
   }
 
@@ -98,8 +101,16 @@
 
   function guardUnexpectedTesting() {
     const running = window.RealTestEngine?.isRunning === true;
-    if (!running) return;
-    if (sessionArmed || manualTestRequested) return;
+    if (!running) {
+      implicitStopIssued = false;
+      return;
+    }
+    if (sessionArmed || manualTestRequested) {
+      implicitStopIssued = false;
+      return;
+    }
+    if (implicitStopIssued) return;
+    implicitStopIssued = true;
     try { window.stopRealTest?.(); } catch {}
     setRunState('idle', 'Blocked an implicit verification start · click Fetch or a Test button to run it.');
   }
@@ -127,13 +138,13 @@
 
   function normalizeIdleUI() {
     const progress = $('#realTestProgressBar');
-    if (progress && currentRun === 'idle') progress.setAttribute('aria-hidden', 'true');
+    if (progress && currentRun === 'idle' && progress.getAttribute('aria-hidden') !== 'true') progress.setAttribute('aria-hidden', 'true');
     const real = $('#realTestBtn');
-    if (real) real.dataset.explicitOnly = '1';
+    if (real && real.dataset.explicitOnly !== '1') real.dataset.explicitOnly = '1';
     const probe = $('#phv26ProbeBtn');
-    if (probe) probe.dataset.explicitOnly = '1';
+    if (probe && probe.dataset.explicitOnly !== '1') probe.dataset.explicitOnly = '1';
     const strict = $('#phv26RealVerifyBtn');
-    if (strict) strict.dataset.explicitOnly = '1';
+    if (strict && strict.dataset.explicitOnly !== '1') strict.dataset.explicitOnly = '1';
   }
 
   function boot() {
@@ -145,11 +156,12 @@
     normalizeIdleUI();
     installEvents();
 
+    // Safety polling must never perform routine DOM maintenance. Reparenting or
+    // rewriting UI from this loop wakes every subtree MutationObserver and can
+    // create an observer/render feedback cycle. UI normalization is performed
+    // once during boot; this poll only reacts to actual runtime state changes.
     const periodic = setInterval(() => {
       if (document.visibilityState !== 'visible' && window.PH_STATE?.fetchRunning !== true) return;
-      ensureSessionNotice();
-      compactRealTestControls();
-      normalizeIdleUI();
       syncFetchingState();
       guardUnexpectedTesting();
     }, 1200);

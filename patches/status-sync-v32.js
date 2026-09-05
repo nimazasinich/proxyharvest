@@ -98,6 +98,29 @@
     el.textContent = next;
     return true;
   }
+  const PH_V32_MUTATION_STABILITY = '40.0.0';
+  const PH_V32_RENDER_STABILITY = '41.0.0';
+  const phV32HtmlCache = new WeakMap();
+  function setHtml(target, value) {
+    const el = typeof target === 'string' ? document.querySelector(target) : target;
+    if (!el) return false;
+    const next = String(value ?? '');
+    const structurallyEqual = () => {
+      if (el.innerHTML === next) return true;
+      const tpl = document.createElement('template');
+      tpl.innerHTML = next;
+      if (el.childNodes.length !== tpl.content.childNodes.length) return false;
+      for (let i = 0; i < el.childNodes.length; i++) {
+        if (!el.childNodes[i].isEqualNode(tpl.content.childNodes[i])) return false;
+      }
+      return true;
+    };
+    if (phV32HtmlCache.get(el) === next && structurallyEqual()) return false;
+    if (structurallyEqual()) { phV32HtmlCache.set(el, next); return false; }
+    el.innerHTML = next;
+    phV32HtmlCache.set(el, next);
+    return true;
+  }
 
   function renderConfigStatus(c) {
     setText('phMetricVerified', c.verified.toLocaleString());
@@ -114,31 +137,34 @@
 
     const statusCards = $('#phStatusCards');
     if (statusCards) {
-      statusCards.innerHTML = [
+      const html = [
         ['Verified', c.verified, 'Protocol/tunnel evidence', 'live'],
         ['Reachable', c.reachable, 'Endpoint only — not verified', 'bridge'],
         ['Untested', c.untested, 'No conclusive verification evidence', 'unknown'],
         ['Failed', c.failed, 'Explicit latest test failure', 'dead']
       ].map(([label, value, sub, key]) => `<div class="ph-status-card ph-card-${key}"><strong>${Number(value).toLocaleString()}</strong><span>${label}</span><small>${sub}</small></div>`).join('');
+      setHtml(statusCards, html);
     }
 
     const v26 = $('#phv26VerifyMetrics');
     if (v26) {
-      v26.innerHTML = `<div class="good"><span>Verified</span><b>${c.verified.toLocaleString()}</b><small>Protocol/tunnel evidence</small></div><div class="info"><span>Reachable</span><b>${c.reachable.toLocaleString()}</b><small>Endpoint only</small></div><div><span>Untested</span><b>${c.untested.toLocaleString()}</b><small>No conclusive evidence</small></div><div class="bad"><span>Failed</span><b>${c.failed.toLocaleString()}</b><small>Explicit test failure</small></div>`;
+      setHtml(v26, `<div class="good"><span>Verified</span><b>${c.verified.toLocaleString()}</b><small>Protocol/tunnel evidence</small></div><div class="info"><span>Reachable</span><b>${c.reachable.toLocaleString()}</b><small>Endpoint only</small></div><div><span>Untested</span><b>${c.untested.toLocaleString()}</b><small>No conclusive evidence</small></div><div class="bad"><span>Failed</span><b>${c.failed.toLocaleString()}</b><small>Explicit test failure</small></div>`);
     }
 
-    const realLive = $('#realTestLive');
-    if (realLive && !window.RealTestEngine?.isRunning) realLive.textContent = `${c.verified} verified`;
+    if (!window.RealTestEngine?.isRunning) setText('realTestLive', `${c.verified} verified`);
 
     const verifiedCard = $('#phMetricVerified')?.closest('.ph-metric');
     if (verifiedCard) {
-      verifiedCard.dataset.count = String(c.verified);
-      verifiedCard.dataset.exportable = String(c.exportableVerified);
+      const count = String(c.verified);
+      const exportable = String(c.exportableVerified);
+      if (verifiedCard.dataset.count !== count) verifiedCard.dataset.count = count;
+      if (verifiedCard.dataset.exportable !== exportable) verifiedCard.dataset.exportable = exportable;
       verifiedCard.classList.toggle('ph-v32-has-live', c.verified > 0);
       verifiedCard.classList.toggle('ph-v32-no-live', c.verified === 0);
-      verifiedCard.title = c.verified
+      const title = c.verified
         ? `${c.verified} verified; ${c.exportableVerified} safely exportable. Click to open Best Export.`
         : 'No protocol/tunnel verified configs yet. Configure Local Bridge and run Real Verify.';
+      if (verifiedCard.title !== title) verifiedCard.title = title;
     }
 
     const audit = { ...c, at: Date.now() };
@@ -231,8 +257,7 @@
       const bars = [$('#phHarvestBar'), $('#progFill')].filter(Boolean);
       for (const bar of bars) bar.style.width = `${this.pct}%`;
       setText('phHarvestPct', `${Math.round(this.pct)}%`);
-      const topStatus = $('#progStatus');
-      if (topStatus && label) topStatus.textContent = label;
+      if (label) setText('progStatus', label);
       syncQuickSteps(this.pct, mode);
     }
   };
