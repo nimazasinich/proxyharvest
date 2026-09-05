@@ -11,9 +11,16 @@ on:
     paths:
       - 'bridge/**'
       - 'patches/runtime-smart-v38.*'
+      - 'patches/status-sync-v32.js'
+      - 'patches/status-guard-v32.js'
+      - 'patches/auto-pipeline-v27.js'
+      - 'patches/compact-interaction-v34.js'
+      - 'patches/configs-density-v35.js'
+      - 'patches/configs-row-v36.js'
       - 'api/ai/**'
       - 'worker/**'
       - 'scripts/build.mjs'
+      - 'scripts/runtime-stability-check.mjs'
       - 'package.json'
       - 'README.md'
       - '.github/workflows/v38-runtime.yml'
@@ -31,11 +38,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate V38 source files
+      - name: Validate V38.2 source and stability files
         shell: bash
         run: |
           set -euo pipefail
-          for f in patches/runtime-smart-v38.js patches/runtime-smart-v38.css bridge/proxyharvest-bridge.mjs api/ai/health.js api/ai/advise.js worker/proxyharvest-gateway.js scripts/build.mjs package.json; do
+          for f in patches/runtime-smart-v38.js patches/runtime-smart-v38.css patches/status-sync-v32.js patches/status-guard-v32.js patches/auto-pipeline-v27.js patches/compact-interaction-v34.js patches/configs-density-v35.js patches/configs-row-v36.js bridge/proxyharvest-bridge.mjs api/ai/health.js api/ai/advise.js worker/proxyharvest-gateway.js scripts/build.mjs scripts/runtime-stability-check.mjs package.json; do
             test -f "$f" || { echo "MISSING: $f"; exit 1; }
           done
           node --check patches/runtime-smart-v38.js
@@ -43,13 +50,14 @@ jobs:
           node --check api/ai/health.js
           node --check api/ai/advise.js
           node --check worker/proxyharvest-gateway.js
-          grep -Fq "38.1.0-smart-runtime" patches/runtime-smart-v38.js
+          node scripts/runtime-stability-check.mjs
+          grep -Fq "38.2.0-smart-runtime-stability" patches/runtime-smart-v38.js
           grep -Fq "cfg-scoreThreshold']='70'" patches/runtime-smart-v38.js
           grep -Fq "BEST VERIFIED" patches/runtime-smart-v38.js
           grep -Fq "BEST REACHABLE" patches/runtime-smart-v38.js
           grep -Fq "VERIFIED .TXT" patches/runtime-smart-v38.js
           grep -Fq "npm run bridge" patches/runtime-smart-v38.js
-          echo 'PASS V38.1-source-defaults-exports'
+          echo 'PASS V38.2-source-defaults-exports-stability'
 
       - name: Validate truthful real verifier
         shell: bash
@@ -95,10 +103,10 @@ jobs:
           test -f public/patches/runtime-smart-v38.js
           test -f public/patches/runtime-smart-v38.css
           grep -Fq 'data-proxyharvest-smart-runtime="v38"' public/index.html
-          grep -Fq '"smartRuntime": "38.1.0-smart-runtime"' public/build.json
+          grep -Fq '"smartRuntime": "38.2.0-smart-runtime-stability"' public/build.json
           grep -Fq '"bridge": "38.0.0-local-real-test-bridge"' public/build.json
           grep -Fq '"aiProvider": "huggingface-inference-providers"' public/build.json
-          echo 'PASS V38.1-build'
+          echo 'PASS V38.2-build-stability'
 
       - name: Summary
-        run: echo 'ProxyHarvest V38.1 PASS — safe defaults + real local verifier + Reality/WireGuard + HF Inference Providers + verified-only exports.'
+        run: echo 'ProxyHarvest V38.2 PASS — runtime mutation-loop hardening + throttled background work + safe defaults + real local verifier + Reality/WireGuard + HF Inference Providers + verified-only exports.'
