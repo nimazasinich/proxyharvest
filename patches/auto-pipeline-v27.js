@@ -109,12 +109,18 @@
     return out;
   }
 
+  const PH_V27_RUNTIME_STABILITY = '39.0.0';
   function setText(id, value) {
     const el = document.getElementById(id);
-    if (el) el.textContent = String(value);
+    if (!el) return false;
+    const next = String(value);
+    if (el.textContent === next) return false;
+    el.textContent = next;
+    return true;
   }
 
-  function refreshVisibleStats() {
+  let lastStatsFingerprint = '';
+  function refreshVisibleStats({ force = false } = {}) {
     const c = counts();
     setText('s-total', c.total);
     setText('csr-total', c.total);
@@ -128,10 +134,14 @@
     setText('phv27Failed', c.failed);
     setText('phv27Untested', c.untested);
     setText('phv27HighScore', c.highScore);
-    const search = $('#cfgSearch');
-    if (search) search.dispatchEvent(new Event('input', { bubbles: true }));
-    $('#phv26RefreshExport')?.click();
-    window.dispatchEvent(new CustomEvent('ph:v27-stats', { detail: c }));
+    const fingerprint = `${c.total}:${c.verified}:${c.reachable}:${c.failed}:${c.untested}:${c.tested}:${c.highScore}`;
+    if (force || fingerprint !== lastStatsFingerprint) {
+      lastStatsFingerprint = fingerprint;
+      const search = $('#cfgSearch');
+      if (search) search.dispatchEvent(new Event('input', { bubbles: true }));
+      $('#phv26RefreshExport')?.click();
+      window.dispatchEvent(new CustomEvent('ph:v27-stats', { detail: c }));
+    }
     return c;
   }
 
@@ -270,7 +280,7 @@
       rescoreAndRank();
       setStage('rank', 'done', 'Ranking complete');
       setStage('summary', 'active', 'Updating live counts and best export…');
-      const c = refreshVisibleStats();
+      const c = refreshVisibleStats({ force: true });
       setStage('summary', 'done', `${c.verified} LIVE · ${c.reachable} reachable · ${c.failed} failed · ${c.highScore} score≥80`);
 
       try {
@@ -347,16 +357,17 @@
     host?.insertAdjacentElement('afterend', box);
     $('#phv27Toggle')?.addEventListener('click', () => setEnabled(!enabled()));
     setEnabled(enabled());
-    refreshVisibleStats();
+    refreshVisibleStats({ force: true });
   }
 
   function boot() {
     renderPipelineUI();
-    setInterval(watchFetchState, 250);
-    setInterval(() => {
-      if (!pipelineRunning) refreshVisibleStats();
+    const fetchWatch = setInterval(() => { if (document.visibilityState === 'visible' || state()?.fetchRunning === true) watchFetchState(); }, 650);
+    const statsWatch = setInterval(() => {
+      if (!pipelineRunning && document.visibilityState === 'visible') refreshVisibleStats();
       if (!$('#phv27AutoPipeline')) renderPipelineUI();
-    }, 2500);
+    }, 6000);
+    window.addEventListener('pagehide', () => { clearInterval(fetchWatch); clearInterval(statsWatch); }, { once: true });
     $('#masterFetchBtn')?.addEventListener('click', () => {
       if (!enabled()) return;
       resetStages();

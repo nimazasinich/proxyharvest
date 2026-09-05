@@ -58,7 +58,7 @@ const manifest = {
   configsDensity: '35.0.0-configs-density',
   configsRow: '36.0.0-single-line-rows',
   workspaceBalance: '37.0.0-row-splitnet-shared-contrast',
-  smartRuntime: '38.1.0-smart-runtime',
+  smartRuntime: '38.2.0-smart-runtime-stability',
   bridge: '38.0.0-local-real-test-bridge',
   aiProvider: 'huggingface-inference-providers',
   canonicalViewport: '1368x753',

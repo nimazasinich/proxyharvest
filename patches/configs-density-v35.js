@@ -3,6 +3,7 @@
 
   const BUILD = '35.0.0-configs-density';
   window.PROXYHARVEST_CONFIGS_DENSITY = BUILD;
+  const PH_V35_RUNTIME_STABILITY = '39.0.0';
 
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -55,7 +56,8 @@
 
   function clarifyStatusOverview() {
     const title = $('#phStatusOverview .ph-status-title span');
-    if (title) title.textContent = 'Verified = real protocol/tunnel evidence · Reachable = endpoint only';
+    const next = 'Verified = real protocol/tunnel evidence · Reachable = endpoint only';
+    if (title && title.textContent !== next) title.textContent = next;
   }
 
   function boot() {
@@ -67,7 +69,7 @@
       timer = setTimeout(() => {
         normalizeTable();
         clarifyStatusOverview();
-      }, 40);
+      }, 140);
     });
     const tab = $('#tab-configs');
     if (tab) mo.observe(tab, { subtree: true, childList: true, characterData: true });

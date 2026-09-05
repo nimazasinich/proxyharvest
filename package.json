@@ -1,11 +1,13 @@
 {
   "name": "proxyharvest",
-  "version": "38.1.0-github-main-smart-runtime",
+  "version": "38.2.0-github-main-runtime-stability",
   "private": true,
   "type": "module",
-  "engines": {"node": ">=22"},
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
-    "check": "node --check proxyharvest.js && node --check patches/ui-v26.js && node --check patches/auto-pipeline-v27.js && node --check patches/status-sync-v32.js && node --check patches/status-guard-v32.js && node --check patches/compact-interaction-v34.js && node --check patches/configs-density-v35.js && node --check patches/configs-row-v36.js && node --check patches/runtime-smart-v38.js && node --check bridge/proxyharvest-bridge.mjs && node --check scripts/build.mjs && node --check api/ai/health.js && node --check api/ai/advise.js && node --check worker/proxyharvest-gateway.js",
+    "check": "node --check proxyharvest.js && node --check patches/ui-v26.js && node --check patches/auto-pipeline-v27.js && node --check patches/status-sync-v32.js && node --check patches/status-guard-v32.js && node --check patches/compact-interaction-v34.js && node --check patches/configs-density-v35.js && node --check patches/configs-row-v36.js && node --check patches/runtime-smart-v38.js && node --check bridge/proxyharvest-bridge.mjs && node --check scripts/build.mjs && node --check api/ai/health.js && node --check api/ai/advise.js && node --check worker/proxyharvest-gateway.js && node scripts/runtime-stability-check.mjs",
     "build": "npm run check && node scripts/build.mjs",
     "bridge": "node bridge/proxyharvest-bridge.mjs"
   }

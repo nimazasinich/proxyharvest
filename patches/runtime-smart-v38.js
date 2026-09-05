@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const BUILD = '38.1.0-smart-runtime';
+  const BUILD = '38.2.0-smart-runtime-stability';
   const WORKER = 'https://proxyharvest-gateway.amin-chinisaz-edu.workers.dev';
   const BRIDGES = ['http://127.0.0.1:8787','http://localhost:8787'];
   const BEST_SCORE = 70;
@@ -16,7 +16,8 @@
   const latency = (c) => Number(c?.probe?.latencyMs ?? c?.latency ?? 999999);
   const fresh = (c) => { const ts=Number(c?.probe?.testedAt||c?.testedAt||0); return ts>0 && Date.now()-ts<86400000; };
   function toast(msg,type='info'){ try { window.toast?.(msg,type); } catch {} }
-  function setValue(id,value){ const el=document.getElementById(id); if(!el)return; if(el.type==='checkbox')el.checked=!!value; else el.value=value??''; el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true})); }
+  function setValue(id,value){ const el=document.getElementById(id); if(!el)return false; const next=el.type==='checkbox'?!!value:String(value??''); const current=el.type==='checkbox'?!!el.checked:String(el.value??''); if(current===next)return false; if(el.type==='checkbox')el.checked=next; else el.value=next; el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true})); return true; }
+  function setText(id,value){const el=document.getElementById(id);if(!el)return false;const next=String(value);if(el.textContent===next)return false;el.textContent=next;return true}
   function parseJson(raw,fallback={}){try{return JSON.parse(raw||'')||fallback}catch{return fallback}}
 
   function sanitizeTokenFields(){
@@ -91,7 +92,37 @@
     setValue('cfg-force-worker',false);setValue('cfg-use-clean-ip',false);setValue('cfg-doh-via-worker',false);setValue('cfg-scoreThreshold',70);setValue('cfg-scoreThresholdSettings',70);sanitizeTokenFields();
   }
   function installSmartButtons(){const infra=document.getElementById('tab-infrastructure');if(infra&&!infra.querySelector('#ph38SmartInfra')){const btn=document.createElement('button');btn.id='ph38SmartInfra';btn.className='ph38-smart-btn';btn.textContent='SMART DEFAULTS + HEALTH CHECK';btn.onclick=async()=>{applySmartInfrastructureDefaults();fixInfrastructureFields();await runtimeAudit({deepAI:true})};infra.prepend(btn)}const settings=document.getElementById('tab-settings');if(settings&&!settings.querySelector('#ph38BridgeCmd')){const note=document.createElement('div');note.id='ph38BridgeCmd';note.className='ph38-bridge-note';note.innerHTML='<b>Real verification:</b> run <code>npm run bridge</code>. The UI auto-detects <code>127.0.0.1:8787</code>. With sing-box + curl, VLESS/Trojan/VMess/WireGuard candidates are checked through an actual local tunnel.';settings.prepend(note)}}
-  function syncCounts(){const arr=window.S?.configs||[],c={v:0,r:0,u:0,f:0};for(const x of arr){if(verified(x))c.v++;else if(reachable(x))c.r++;else if(failed(x))c.f++;else c.u++}const set=(id,n)=>{const el=document.getElementById(id);if(el)el.textContent=String(n)};set('phMetricVerified',c.v);set('phMetricReachable',c.r);set('phMetricUntested',c.u);set('phMetricFailed',c.f)}
-  function boot(){migrateAppSettings();applySmartInfrastructureDefaults();sanitizeTokenFields();fixInfrastructureFields();installBestExports();installSmartButtons();syncCounts();runtimeAudit({quiet:true});const mo=new MutationObserver(()=>{sanitizeTokenFields();fixInfrastructureFields();installBestExports();installSmartButtons();syncCounts()});mo.observe(document.documentElement,{subtree:true,childList:true});setInterval(syncCounts,2500);window.PROXYHARVEST_V38=Object.freeze({BUILD,runtimeAudit,detectBridgeSmart,bestVerified,bestReachable,bestSplitVerified,applySmartInfrastructureDefaults})}
+  function syncCounts(){const arr=window.S?.configs||[],c={v:0,r:0,u:0,f:0};for(const x of arr){if(verified(x))c.v++;else if(reachable(x))c.r++;else if(failed(x))c.f++;else c.u++}setText('phMetricVerified',c.v);setText('phMetricReachable',c.r);setText('phMetricUntested',c.u);setText('phMetricFailed',c.f);return c}
+  function boot(){
+    migrateAppSettings();
+    applySmartInfrastructureDefaults();
+    sanitizeTokenFields();
+    fixInfrastructureFields();
+    installBestExports();
+    installSmartButtons();
+    syncCounts();
+
+    let repairTimer=null;
+    let repairing=false;
+    const repairUi=()=>{
+      if(repairing)return;
+      repairing=true;
+      try{sanitizeTokenFields();fixInfrastructureFields();installBestExports();installSmartButtons();syncCounts()}
+      finally{repairing=false}
+    };
+    const scheduleRepair=()=>{
+      if(repairTimer)clearTimeout(repairTimer);
+      repairTimer=setTimeout(()=>{repairTimer=null;repairUi()},180);
+    };
+    const mo=new MutationObserver(records=>{
+      if(records.some(r=>r.addedNodes?.length||r.removedNodes?.length))scheduleRepair();
+    });
+    if(document.body)mo.observe(document.body,{subtree:true,childList:true});
+
+    const periodic=setInterval(()=>{if(document.visibilityState==='visible')syncCounts()},5000);
+    window.addEventListener('pagehide',()=>{clearInterval(periodic);mo.disconnect();if(repairTimer)clearTimeout(repairTimer)},{once:true});
+    setTimeout(()=>runtimeAudit({quiet:true}),250);
+    window.PROXYHARVEST_V38=Object.freeze({BUILD,runtimeAudit,detectBridgeSmart,bestVerified,bestReachable,bestSplitVerified,applySmartInfrastructureDefaults});
+  }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();

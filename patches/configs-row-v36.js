@@ -3,6 +3,7 @@
 
   const BUILD = '36.0.0-single-line-rows';
   window.PROXYHARVEST_CONFIGS_ROW = BUILD;
+  const PH_V36_RUNTIME_STABILITY = '39.0.0';
 
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -21,7 +22,7 @@
   }
 
   function normalizeEvidencePill(el) {
-    if (!el) return;
+    if (!el || el.dataset.phv36Normalized === '1') return;
     const full = el.dataset.phv36Original || String(el.textContent || '').replace(/\s+/g, ' ').trim();
     const mapped = shortEvidence(full);
     if (!mapped) return;
@@ -56,7 +57,7 @@
     if (tab) {
       const mo = new MutationObserver(() => {
         clearTimeout(timer);
-        timer = setTimeout(normalizeRows, 30);
+        timer = setTimeout(normalizeRows, 140);
       });
       mo.observe(tab, { subtree: true, childList: true, characterData: true });
     }

@@ -10,6 +10,7 @@
   let sessionArmed = false;
   let manualTestRequested = false;
   let currentRun = 'idle';
+  const PH_V34_RUNTIME_STABILITY = '39.0.0';
 
   function setAutoEnabled(on) {
     try { localStorage.setItem(AUTO_KEY, on ? '1' : '0'); } catch {}
@@ -144,13 +145,15 @@
     normalizeIdleUI();
     installEvents();
 
-    setInterval(() => {
+    const periodic = setInterval(() => {
+      if (document.visibilityState !== 'visible' && window.PH_STATE?.fetchRunning !== true) return;
       ensureSessionNotice();
       compactRealTestControls();
       normalizeIdleUI();
       syncFetchingState();
       guardUnexpectedTesting();
-    }, 350);
+    }, 1200);
+    window.addEventListener('pagehide', () => clearInterval(periodic), { once: true });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });

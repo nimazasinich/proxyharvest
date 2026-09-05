@@ -89,9 +89,14 @@
     return list;
   }
 
+  const PH_V32_RUNTIME_STABILITY = '39.0.0';
   function setText(id, value) {
     const el = document.getElementById(id);
-    if (el) el.textContent = String(value);
+    if (!el) return false;
+    const next = String(value);
+    if (el.textContent === next) return false;
+    el.textContent = next;
+    return true;
   }
 
   function renderConfigStatus(c) {
@@ -138,16 +143,28 @@
 
     const audit = { ...c, at: Date.now() };
     window.PROXYHARVEST_VERIFICATION_AUDIT = audit;
-    window.dispatchEvent(new CustomEvent('ph:v32-verification-sync', { detail: audit }));
+    const auditFingerprint = `${c.total}:${c.verified}:${c.reachable}:${c.failed}:${c.untested}:${c.exportableVerified}`;
+    if (window.__PH_V32_LAST_AUDIT_FP !== auditFingerprint) {
+      window.__PH_V32_LAST_AUDIT_FP = auditFingerprint;
+      window.dispatchEvent(new CustomEvent('ph:v32-verification-sync', { detail: audit }));
+    }
     if (!c.consistent) console.error('[ProxyHarvest V32] verification count invariant failed', audit);
     return c;
   }
 
+  let lastExportRefreshFingerprint = '';
+  let lastExportRefreshAt = 0;
   function syncAll() {
     const c = counts();
     renderConfigStatus(c);
     updateBestExportAction(c);
-    $('#phv26RefreshExport')?.click();
+    const fingerprint = `${c.total}:${c.verified}:${c.reachable}:${c.failed}:${c.untested}:${c.exportableVerified}`;
+    const now = Date.now();
+    if (fingerprint !== lastExportRefreshFingerprint || now - lastExportRefreshAt > 8000) {
+      lastExportRefreshFingerprint = fingerprint;
+      lastExportRefreshAt = now;
+      $('#phv26RefreshExport')?.click();
+    }
     return c;
   }
 
@@ -183,15 +200,19 @@
 
   function updateBestExportAction(c = counts()) {
     ensureBestExportAction();
-    const list = bestVerified({ minScore: 70, limit: 100 });
+    let eligible = 0;
+    for (const cfg of state()?.configs || []) {
+      if (classify(cfg) === 'verified' && score(cfg) >= 70 && exportUri(cfg)) eligible++;
+    }
+    const count = Math.min(100, eligible);
     const btn = $('#phv32BestExport');
     const n = $('#phv32BestCount');
-    if (n) n.textContent = String(list.length);
+    if (n) setText('phv32BestCount', count);
     if (btn) {
-      btn.disabled = list.length === 0;
-      btn.title = list.length ? `Export top ${list.length} verified configs (score ≥70)` : 'No exportable verified configs yet';
+      btn.disabled = count === 0;
+      btn.title = count ? `Export top ${count} verified configs (score ≥70)` : 'No exportable verified configs yet';
     }
-    return list;
+    return count;
   }
 
   const dashboardProgress = {
@@ -349,15 +370,25 @@
     });
   }
 
+  let runtimeSyncTimer = null;
+  function scheduleRuntimeSync() {
+    if (runtimeSyncTimer) return;
+    runtimeSyncTimer = setTimeout(() => {
+      runtimeSyncTimer = null;
+      if (document.visibilityState !== 'visible') return;
+      const c = syncAll();
+      animateCountChanges(c);
+    }, 140);
+  }
+
   function observeRuntime() {
     const targets = ['realTestLive', 'realTestStatus', 'progStatus', 'progCount', 'dbStatusText'];
+    const observer = new MutationObserver(scheduleRuntimeSync);
     for (const id of targets) {
       const el = document.getElementById(id);
-      if (el) new MutationObserver(() => {
-        const c = syncAll();
-        animateCountChanges(c);
-      }).observe(el, { childList: true, characterData: true, subtree: true });
+      if (el) observer.observe(el, { childList: true, characterData: true, subtree: true });
     }
+    window.addEventListener('pagehide', () => { observer.disconnect(); if (runtimeSyncTimer) clearTimeout(runtimeSyncTimer); }, { once: true });
   }
 
   function boot() {
@@ -370,12 +401,14 @@
     animateCountChanges(c);
     dashboardProgress.set(0, 'Ready for commands', 'Fetch All will continue automatically through test, score, rank and export preparation.', 'idle');
     window.PROXYHARVEST_V32 = Object.freeze({ BUILD, classify, counts, bestVerified, exportBestVerified, syncAll });
-    setInterval(() => {
+    const periodic = setInterval(() => {
       patchStrictOption();
       patchRealTestEngine();
+      if (document.visibilityState !== 'visible') return;
       const next = syncAll();
       animateCountChanges(next);
-    }, 1400);
+    }, 5000);
+    window.addEventListener('pagehide', () => clearInterval(periodic), { once: true });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });

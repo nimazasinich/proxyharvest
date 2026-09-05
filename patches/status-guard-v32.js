@@ -1,6 +1,7 @@
 (() => {
   'use strict';
   let queued = false;
+  const PH_V32_GUARD_STABILITY = '39.0.0';
   function expected() {
     const api = window.PROXYHARVEST_V32;
     if (!api?.counts) return null;
@@ -51,7 +52,8 @@
       const el = document.getElementById(id);
       if (el) observer.observe(el, { childList: true, characterData: true, subtree: true });
     }
-    setInterval(guard, 900);
+    const periodic = setInterval(() => { if (document.visibilityState === 'visible') guard(); }, 4000);
+    window.addEventListener('pagehide', () => clearInterval(periodic), { once: true });
     guard();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(install, 0), { once: true });
