@@ -1,105 +1,134 @@
-/* ProxyHarvest V28 — viewport-safe shell repair
-   The legacy premium runtime scales a fixed 1672x941 canvas. This patch deliberately
-   neutralizes that transform so the GitHub/Vercel build always fills the viewport. */
+/* ProxyHarvest V29 — collision-proof responsive shell
+   Fixes dashboard/header/sidebar overlaps without scaling the application canvas. */
+
+html,body{width:100%;height:100%;margin:0;overflow:hidden}
+body[data-premium-shell="1"] *{box-sizing:border-box}
 
 body[data-premium-shell="1"] .ph-app-shell{
-  position:fixed!important;
-  inset:0!important;
-  left:0!important;
-  top:0!important;
-  width:100vw!important;
-  max-width:none!important;
-  height:100dvh!important;
-  min-height:0!important;
-  margin:0!important;
-  transform:none!important;
-  transform-origin:0 0!important;
-  grid-template-columns:242px minmax(0,1fr)!important;
-  overflow:hidden!important;
-  box-shadow:none!important;
+  position:fixed!important;inset:0!important;left:0!important;top:0!important;
+  width:100vw!important;max-width:none!important;height:100dvh!important;min-height:0!important;
+  margin:0!important;transform:none!important;transform-origin:0 0!important;
+  display:grid!important;grid-template-columns:236px minmax(0,1fr)!important;
+  overflow:hidden!important;box-shadow:none!important;
 }
 
+/* Sidebar: reserve real space for navigation and bottom cards; never overlay them. */
 body[data-premium-shell="1"] .ph-sidebar{
-  width:242px!important;
-  height:100dvh!important;
-  min-height:0!important;
-  overflow:hidden!important;
+  width:236px!important;height:100dvh!important;min-height:0!important;
+  padding:20px 14px 12px!important;display:flex!important;flex-direction:column!important;
+  overflow:hidden!important;position:relative!important;
 }
+body[data-premium-shell="1"] .ph-brand{flex:0 0 auto!important;padding:0 10px 18px!important;min-width:0!important}
+body[data-premium-shell="1"] .ph-brand-name{min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;font-size:21px!important}
+body[data-premium-shell="1"] .ph-nav{
+  flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;
+  padding:0 2px 8px!important;gap:5px!important;scrollbar-width:thin;
+}
+body[data-premium-shell="1"] .ph-nav-item{
+  flex:0 0 48px!important;height:48px!important;min-height:48px!important;
+  gap:14px!important;padding:0 14px!important;font-size:14px!important;
+}
+body[data-premium-shell="1"] .ph-side-bottom{
+  position:static!important;left:auto!important;right:auto!important;bottom:auto!important;
+  flex:0 0 auto!important;min-height:0!important;margin-top:8px!important;
+  display:grid!important;grid-template-columns:1fr!important;gap:8px!important;
+}
+body[data-premium-shell="1"] .ph-plan-card{height:auto!important;min-height:82px!important;padding:10px!important;margin:0!important}
+body[data-premium-shell="1"] .ph-plan-bar{margin-top:9px!important}
+body[data-premium-shell="1"] .ph-plan-usage{margin-top:4px!important}
+body[data-premium-shell="1"] .ph-user-card{height:56px!important;margin:0!important;padding:8px 10px!important;min-width:0!important}
+body[data-premium-shell="1"] .ph-user-card>div:not(.ph-avatar){min-width:0!important;overflow:hidden!important}
+body[data-premium-shell="1"] .ph-user-card b,body[data-premium-shell="1"] .ph-user-card small{overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+body[data-premium-shell="1"] .ph-collapse{height:30px!important;min-height:30px!important;padding:0 12px!important;align-items:center!important}
 
+/* Content shell: one vertical flow, no legacy fixed 941px panels. */
 body[data-premium-shell="1"] .ph-content{
-  width:auto!important;
-  min-width:0!important;
-  max-width:none!important;
-  height:100dvh!important;
-  min-height:0!important;
-  overflow:hidden!important;
-  display:flex!important;
-  flex-direction:column!important;
+  width:auto!important;min-width:0!important;max-width:none!important;height:100dvh!important;min-height:0!important;
+  overflow:hidden!important;display:flex!important;flex-direction:column!important;
 }
-
+body[data-premium-shell="1"] .ph-content>.tab-panel{height:auto!important;max-height:none!important;min-height:0!important}
 body[data-premium-shell="1"] .ph-global-topbar{
-  width:100%!important;
-  min-width:0!important;
-  flex:0 0 auto!important;
-  box-sizing:border-box!important;
+  width:100%!important;min-width:0!important;flex:0 0 auto!important;position:relative!important;
+  display:none;grid-template-columns:minmax(180px,1fr) auto!important;align-items:center!important;
+  gap:14px!important;padding:0 18px!important;box-sizing:border-box!important;
 }
-
-body[data-premium-shell="1"] .ph-global-title,
-body[data-premium-shell="1"] .ph-global-actions,
-body[data-premium-shell="1"] .ph-command-slot{
-  min-width:0!important;
+body[data-premium-shell="1"] .ph-global-topbar.is-visible{display:grid!important}
+body[data-premium-shell="1"] .ph-global-title{min-width:0!important;overflow:hidden!important}
+body[data-premium-shell="1"] .ph-global-title>div{min-width:0!important}
+body[data-premium-shell="1"] .ph-global-title h1,body[data-premium-shell="1"] .ph-global-title p{overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+body[data-premium-shell="1"] .ph-global-actions{min-width:0!important;margin-left:0!important;justify-self:end!important;display:flex!important;align-items:center!important;gap:6px!important}
+body[data-premium-shell="1"] .ph-command-slot{min-width:0!important;display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:6px!important;flex-wrap:wrap!important}
+body[data-premium-shell="1"] .ph-global-topbar.is-visible + .tab-content.active{
+  height:auto!important;max-height:none!important;min-height:0!important;flex:1 1 auto!important;
 }
-
-body[data-premium-shell="1"] .ph-global-actions{
-  margin-left:auto!important;
-  flex:0 1 auto!important;
-}
-
 body[data-premium-shell="1"] .tab-content.active{
-  width:100%!important;
-  max-width:none!important;
-  min-width:0!important;
-  min-height:0!important;
-  flex:1 1 auto!important;
-  box-sizing:border-box!important;
+  width:100%!important;max-width:none!important;min-width:0!important;min-height:0!important;
+  flex:1 1 auto!important;box-sizing:border-box!important;
 }
 
-body[data-premium-shell="1"] #tab-dashboard{
-  height:auto!important;
-  min-height:0!important;
-  overflow:hidden!important;
-  padding:0!important;
-}
-
+/* Dashboard grid: exact columns are flexible and may never exceed the viewport. */
+body[data-premium-shell="1"] #tab-dashboard{height:auto!important;min-height:0!important;overflow:hidden!important;padding:0!important}
 body[data-premium-shell="1"] .ph-premium-dashboard{
-  width:100%!important;
-  max-width:none!important;
-  height:100%!important;
-  min-height:0!important;
-  grid-template-columns:278px minmax(0,1fr) 290px!important;
+  width:100%!important;max-width:none!important;height:100%!important;min-height:0!important;
+  display:grid!important;grid-template-columns:minmax(218px,250px) minmax(0,1fr) minmax(252px,278px)!important;
   overflow:hidden!important;
 }
-
 body[data-premium-shell="1"] .ph-route-col,
 body[data-premium-shell="1"] .ph-workspace,
-body[data-premium-shell="1"] .ph-activity{
-  min-width:0!important;
-  min-height:0!important;
+body[data-premium-shell="1"] .ph-activity{min-width:0!important;min-height:0!important;max-width:none!important}
+
+body[data-premium-shell="1"] .ph-route-col{
+  padding:38px 22px 18px!important;overflow-y:auto!important;overflow-x:hidden!important;
+}
+body[data-premium-shell="1"] .ph-route-card{
+  width:100%!important;max-width:198px!important;height:104px!important;margin:0 auto 30px!important;
 }
 
 body[data-premium-shell="1"] .ph-workspace{
-  width:auto!important;
-  max-width:none!important;
-  overflow:auto!important;
+  width:auto!important;padding:20px 18px 18px!important;overflow-y:auto!important;overflow-x:hidden!important;
 }
-
-/* V27's autonomous engine remains active; only its extra dashboard box is removed.
-   Progress continues through the existing Process Engine, counters and live summary. */
-#phv27AutoPipeline{
-  display:none!important;
+body[data-premium-shell="1"] .ph-main-head{
+  width:100%!important;height:auto!important;min-height:72px!important;margin:0 0 12px!important;
+  display:grid!important;grid-template-columns:minmax(165px,1fr) auto!important;
+  align-items:start!important;gap:10px!important;
 }
+body[data-premium-shell="1"] .ph-dashboard-titlewrap,
+body[data-premium-shell="1"] .ph-heading-copy{min-width:0!important}
+body[data-premium-shell="1"] .ph-heading-copy{width:auto!important}
+body[data-premium-shell="1"] .ph-main-head h1{font-size:29px!important;line-height:1.05!important;margin:2px 0 6px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+body[data-premium-shell="1"] .ph-main-head p{font-size:11px!important;line-height:1.35!important;margin:0!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+body[data-premium-shell="1"] .ph-head-actions{
+  min-width:0!important;max-width:100%!important;margin:0!important;display:flex!important;
+  align-items:flex-start!important;justify-content:flex-end!important;gap:6px!important;flex-wrap:wrap!important;
+}
+body[data-premium-shell="1"] .ph-head-actions .ph-command-slot{max-width:100%!important}
+body[data-premium-shell="1"] .ph-command-slot .btn{
+  height:36px!important;min-width:34px!important;padding:0 9px!important;font-size:9px!important;border-radius:9px!important;
+}
+body[data-premium-shell="1"] .ph-select-btn{width:138px!important;height:36px!important;font-size:10px!important}
+body[data-premium-shell="1"] .ph-refresh-btn,body[data-premium-shell="1"] .ph-more-btn{width:36px!important;height:36px!important;min-width:36px!important}
 
-/* Keep settings and other workspaces full-width and independently scrollable. */
+/* Center cards: allow shrink, never force horizontal scrolling. */
+body[data-premium-shell="1"] .ph-metrics{width:100%!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:10px!important;margin-bottom:14px!important}
+body[data-premium-shell="1"] .ph-metric{min-width:0!important;height:auto!important;min-height:118px!important;padding:18px 14px!important}
+body[data-premium-shell="1"] .ph-panel,body[data-premium-shell="1"] .ph-recent{width:100%!important;max-width:100%!important;min-width:0!important;overflow:hidden!important}
+body[data-premium-shell="1"] .ph-table-head,body[data-premium-shell="1"] .ph-table-row{
+  width:100%!important;min-width:0!important;
+  grid-template-columns:minmax(0,1.5fr) minmax(0,1.15fr) minmax(54px,.72fr) minmax(54px,.72fr) minmax(84px,1.05fr) minmax(58px,.72fr) 24px!important;
+}
+body[data-premium-shell="1"] .ph-table-head>*,body[data-premium-shell="1"] .ph-table-row>*{min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important}
+
+body[data-premium-shell="1"] .ph-activity{
+  padding:20px 14px 16px!important;overflow-y:auto!important;overflow-x:hidden!important;
+}
+body[data-premium-shell="1"] .ph-activity>h2{margin-top:2px!important}
+body[data-premium-shell="1"] .ph-act-card{max-width:100%!important}
+body[data-premium-shell="1"] .ph-sparkline{max-width:100%!important;width:calc(100% - 12px)!important;margin-left:6px!important}
+
+/* Autonomous engine remains functional but never occupies dashboard layout space. */
+#phv27AutoPipeline{display:none!important;width:0!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important}
+
+/* Functional pages: full width, one scroll owner, no legacy 941px cap. */
 body[data-premium-shell="1"] #tab-settings,
 body[data-premium-shell="1"] #tab-configs,
 body[data-premium-shell="1"] #tab-splitnet,
@@ -108,38 +137,53 @@ body[data-premium-shell="1"] #tab-ai-healer,
 body[data-premium-shell="1"] #tab-infrastructure,
 body[data-premium-shell="1"] #tab-sources,
 body[data-premium-shell="1"] #tab-ircf{
-  width:100%!important;
-  max-width:none!important;
-  min-width:0!important;
-  min-height:0!important;
-  overflow:auto!important;
-  box-sizing:border-box!important;
+  width:100%!important;max-width:none!important;height:auto!important;max-height:none!important;
+  min-width:0!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;
+  padding:14px!important;box-sizing:border-box!important;
+}
+body[data-premium-shell="1"] #tab-settings>* ,
+body[data-premium-shell="1"] #tab-configs>* ,
+body[data-premium-shell="1"] #tab-splitnet>* ,
+body[data-premium-shell="1"] #tab-wireguard>* ,
+body[data-premium-shell="1"] #tab-ai-healer>* ,
+body[data-premium-shell="1"] #tab-infrastructure>*{max-width:100%!important;min-width:0!important}
+
+/* Avoid fixed-width Config table causing page-level horizontal scroll; table owns its own scroller. */
+body[data-premium-shell="1"] #tab-configs .cfgs-table-wrap{width:100%!important;max-width:100%!important;overflow:auto!important}
+body[data-premium-shell="1"] #tab-configs .cfgs-hdr,body[data-premium-shell="1"] #tab-configs .cfgs-action-bar{width:100%!important;max-width:100%!important}
+
+@media (max-width:1450px){
+  body[data-premium-shell="1"] .ph-app-shell{grid-template-columns:214px minmax(0,1fr)!important}
+  body[data-premium-shell="1"] .ph-sidebar{width:214px!important;padding-left:11px!important;padding-right:11px!important}
+  body[data-premium-shell="1"] .ph-premium-dashboard{grid-template-columns:214px minmax(0,1fr) 246px!important}
+  body[data-premium-shell="1"] .ph-route-col{padding-left:15px!important;padding-right:15px!important}
+  body[data-premium-shell="1"] .ph-workspace{padding-left:14px!important;padding-right:14px!important}
+  body[data-premium-shell="1"] .ph-main-head h1{font-size:25px!important}
+  body[data-premium-shell="1"] .ph-command-slot .btn{padding-left:7px!important;padding-right:7px!important;font-size:8px!important}
+  body[data-premium-shell="1"] .ph-select-btn{width:124px!important}
 }
 
-@media (max-width:1500px){
-  body[data-premium-shell="1"] .ph-app-shell{grid-template-columns:220px minmax(0,1fr)!important}
-  body[data-premium-shell="1"] .ph-sidebar{width:220px!important}
-  body[data-premium-shell="1"] .ph-premium-dashboard{grid-template-columns:230px minmax(0,1fr) 270px!important}
-}
-
-@media (max-width:1180px){
-  body[data-premium-shell="1"] .ph-app-shell{grid-template-columns:190px minmax(0,1fr)!important}
-  body[data-premium-shell="1"] .ph-sidebar{width:190px!important;padding-left:10px!important;padding-right:10px!important}
-  body[data-premium-shell="1"] .ph-premium-dashboard{grid-template-columns:200px minmax(0,1fr) 240px!important}
-  body[data-premium-shell="1"] .ph-global-topbar{padding-left:14px!important;padding-right:14px!important}
-  body[data-premium-shell="1"] .ph-command-slot{gap:4px!important}
-  body[data-premium-shell="1"] .ph-command-slot .btn{padding-left:8px!important;padding-right:8px!important}
-}
-
-@media (max-width:900px){
-  body[data-premium-shell="1"] .ph-app-shell{grid-template-columns:78px minmax(0,1fr)!important}
-  body[data-premium-shell="1"] .ph-sidebar{width:78px!important;padding:12px 8px!important}
-  body[data-premium-shell="1"] .ph-sidebar .ph-brand-name,
-  body[data-premium-shell="1"] .ph-sidebar .ph-nav-item>span,
-  body[data-premium-shell="1"] .ph-sidebar .ph-nav-count,
-  body[data-premium-shell="1"] .ph-sidebar .ph-plan-card,
-  body[data-premium-shell="1"] .ph-sidebar .ph-user-card>div:not(.ph-avatar),
-  body[data-premium-shell="1"] .ph-sidebar .ph-collapse-label{display:none!important}
-  body[data-premium-shell="1"] .ph-premium-dashboard{grid-template-columns:170px minmax(0,1fr)!important}
+@media (max-width:1240px){
+  body[data-premium-shell="1"] .ph-premium-dashboard{grid-template-columns:205px minmax(0,1fr)!important}
   body[data-premium-shell="1"] .ph-activity{display:none!important}
+  body[data-premium-shell="1"] .ph-main-head{grid-template-columns:1fr!important}
+  body[data-premium-shell="1"] .ph-head-actions{justify-content:flex-start!important}
+}
+
+@media (max-width:980px){
+  body[data-premium-shell="1"] .ph-app-shell{grid-template-columns:76px minmax(0,1fr)!important}
+  body[data-premium-shell="1"] .ph-sidebar{width:76px!important;padding:12px 7px!important}
+  body[data-premium-shell="1"] .ph-brand{justify-content:center!important;padding:0 0 12px!important}
+  body[data-premium-shell="1"] .ph-brand-name,
+  body[data-premium-shell="1"] .ph-nav-item>span,
+  body[data-premium-shell="1"] .ph-nav-count,
+  body[data-premium-shell="1"] .ph-plan-card,
+  body[data-premium-shell="1"] .ph-user-card>div:not(.ph-avatar),
+  body[data-premium-shell="1"] .ph-chevron,
+  body[data-premium-shell="1"] .ph-collapse span{display:none!important}
+  body[data-premium-shell="1"] .ph-nav-item{justify-content:center!important;padding:0!important;gap:0!important}
+  body[data-premium-shell="1"] .ph-user-card{justify-content:center!important;padding:8px!important}
+  body[data-premium-shell="1"] .ph-premium-dashboard{grid-template-columns:170px minmax(0,1fr)!important}
+  body[data-premium-shell="1"] .ph-route-col{padding:22px 10px!important}
+  body[data-premium-shell="1"] .ph-route-card{height:92px!important;margin-bottom:18px!important}
 }
