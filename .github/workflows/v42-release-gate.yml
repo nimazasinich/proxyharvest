@@ -1,0 +1,100 @@
+name: ProxyHarvest V42 Release Gate
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'proxyharvest.html'
+      - 'proxyharvest.js'
+      - 'patches/**'
+      - 'bridge/**'
+      - 'api/ai/**'
+      - 'worker/**'
+      - 'scripts/build.mjs'
+      - 'scripts/runtime-stability-check.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/v42-release-gate.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: proxyharvest-v42-release-gate-main
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+
+      - name: Static V42 gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run check
+          node scripts/runtime-stability-check.mjs
+          node --check patches/control-center-v42.js
+          node --check worker/proxyharvest-gateway.js
+          node --check bridge/proxyharvest-bridge.mjs
+          grep -Fq '42.0.0-auto-control-center' package.json
+          grep -Fq "controlCenter: '42.0.0-auto-control-center'" scripts/build.mjs
+          grep -Fq "cloudEdgeRelay: '42.0.0-streaming-cors-relay'" scripts/build.mjs
+          grep -Fq 'AUTO_INTERVAL=15*60*1000' patches/control-center-v42.js
+          grep -Fq 'ph-v42-source-migration-1' patches/control-center-v42.js
+          grep -Fq 'local-real-test-bridge' bridge/proxyharvest-bridge.mjs README.md
+          cmp -s index.html proxyharvest.html
+          git diff --check
+
+      - name: Build canonical V42 output
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run build
+          test -s public/index.html
+          test -s public/patches/control-center-v42.js
+          test -s public/patches/control-center-v42.css
+          grep -Fq 'data-proxyharvest-control-center="v42"' public/index.html
+          grep -Fq '"controlCenter": "42.0.0-auto-control-center"' public/build.json
+          grep -Fq '"cloudEdgeRelay": "42.0.0-streaming-cors-relay"' public/build.json
+          grep -Fq '"bridge": "38.0.0-local-real-test-bridge"' public/build.json
+
+      - name: Instrumented mutation writer harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --ignore-scripts --no-audit --no-fund jsdom@26.1.0 fake-indexeddb@6.0.1
+          timeout 30s node scripts/mutation_writer_harness.mjs
+
+      - name: MutationObserver harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 30s node scripts/mutation_observer_harness.mjs
+
+      - name: Headless browser event-loop smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --ignore-scripts --no-audit --no-fund puppeteer-core@24.16.0
+          python3 -m http.server 4173 --directory public >/tmp/proxyharvest-v42-http.log 2>&1 &
+          HTTP_PID=$!
+          cleanup() { kill "$HTTP_PID" 2>/dev/null || true; }
+          trap cleanup EXIT
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME" || { echo 'Chrome/Chromium not found on runner'; exit 1; }
+          PH_CHROME_PATH="$CHROME" timeout 30s node scripts/browser_stability_smoke.mjs
+
+      - name: V42 release-gate summary
+        run: echo 'PASS ProxyHarvest V42 source + build + mutation harnesses + headless browser smoke.'

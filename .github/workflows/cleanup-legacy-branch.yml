@@ -1,0 +1,42 @@
+name: Cleanup Fully Merged Legacy Branch
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cleanup-legacy-branch.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: proxyharvest-branch-cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Delete fix/small-cleanup only if fully merged into main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main fix/small-cleanup --prune || true
+          if ! git show-ref --verify --quiet refs/remotes/origin/fix/small-cleanup; then
+            echo 'Legacy branch already absent.'
+            exit 0
+          fi
+          git merge-base --is-ancestor origin/fix/small-cleanup origin/main || {
+            echo 'REFUSING: fix/small-cleanup is not fully merged into main.'
+            exit 1
+          }
+          AHEAD="$(git rev-list --count origin/main..origin/fix/small-cleanup)"
+          test "$AHEAD" = '0' || { echo "REFUSING: legacy branch has $AHEAD unique commit(s)."; exit 1; }
+          git push origin --delete fix/small-cleanup
+          echo 'PASS: deleted fully merged legacy branch fix/small-cleanup.'

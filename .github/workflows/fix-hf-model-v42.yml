@@ -1,0 +1,71 @@
+name: Fix Supported HF Model v42
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/fix_hf_model_v42.py'
+      - '.github/workflows/fix-hf-model-v42.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: proxyharvest-hf-model-v42
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Replace unsupported HF model everywhere
+        run: python3 scripts/fix_hf_model_v42.py
+
+      - name: Validate provider-compatible model and source syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import subprocess
+          old = 'Qwen/Qwen2.5-7B-Instruct' + '-1M:fastest'
+          new = 'Qwen/Qwen2.5-7B-Instruct:fastest'
+          files = subprocess.check_output(['git','ls-files'], text=True).splitlines()
+          stale=[]; found=[]
+          for f in files:
+              try: s=open(f,encoding='utf-8').read()
+              except Exception: continue
+              if old in s: stale.append(f)
+              if new in s: found.append(f)
+          assert not stale, f'stale unsupported model remains: {stale}'
+          assert found, 'supported HF model reference missing'
+          print('PASS supported model refs:', ', '.join(found))
+          PY
+          node --check worker/proxyharvest-gateway.js
+          node --check api/ai/health.js
+          node --check api/ai/advise.js
+          git diff --check
+
+      - name: Commit supported HF model migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.email "actions@github.com"
+          git config user.name "proxyharvest-hf-model-bot"
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'HF model migration already applied.'
+            exit 0
+          fi
+          git commit -m "fix: use provider-supported Qwen2.5-7B-Instruct"
+          git pull --rebase origin main
+          git push origin HEAD:main
