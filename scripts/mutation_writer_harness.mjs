@@ -52,15 +52,57 @@ const dom = new JSDOM(html, {
       window.localStorage.setItem('ph_strict_real_ping', 'false');
     } catch {}
 
-    const state = { enabled: false, writes: new Map() };
+    const state = { enabled: false, writes: new Map(), currentTask: null, timers: [] };
+    const sourceLines = () => String(new Error().stack || '').split('\n').slice(2, 30)
+      .filter(line => /http:\/\/proxyharvest\.local\/(proxyharvest\.js|patches\/)/.test(line))
+      .map(line => line.trim());
+    const timerSource = () => {
+      const lines = sourceLines();
+      return { source: lines[0] || 'unknown-timer', stack: lines.slice(0, 8) };
+    };
+    const withTask = (task, fn, self, args) => {
+      const prev = state.currentTask;
+      state.currentTask = task;
+      try { return fn.apply(self, args); }
+      finally { state.currentTask = prev; }
+    };
+
+    const nativeSetInterval = window.setInterval.bind(window);
+    window.setInterval = function(fn, delay, ...args) {
+      const meta = timerSource();
+      const task = { kind: 'interval', delay: Number(delay) || 0, ...meta };
+      state.timers.push(task);
+      if (typeof fn !== 'function') return nativeSetInterval(fn, delay, ...args);
+      return nativeSetInterval(function(...cbArgs) { return withTask(task, fn, this, cbArgs); }, delay, ...args);
+    };
+    const nativeSetTimeout = window.setTimeout.bind(window);
+    window.setTimeout = function(fn, delay, ...args) {
+      const meta = timerSource();
+      const task = { kind: 'timeout', delay: Number(delay) || 0, ...meta };
+      state.timers.push(task);
+      if (typeof fn !== 'function') return nativeSetTimeout(fn, delay, ...args);
+      return nativeSetTimeout(function(...cbArgs) { return withTask(task, fn, this, cbArgs); }, delay, ...args);
+    };
+    if (typeof window.requestAnimationFrame === 'function') {
+      const nativeRaf = window.requestAnimationFrame.bind(window);
+      window.requestAnimationFrame = function(fn) {
+        const meta = timerSource();
+        const task = { kind: 'raf', delay: 0, ...meta };
+        state.timers.push(task);
+        return nativeRaf(function(...cbArgs) { return withTask(task, fn, this, cbArgs); });
+      };
+    }
+
     const record = (kind, target, value) => {
       if (!state.enabled) return;
       const id = target?.id ? `#${target.id}` : target?.className ? `.${String(target.className).trim().replace(/\s+/g, '.')}` : target?.nodeName || 'unknown';
-      const stack = String(new Error().stack || '').split('\n').slice(2, 25);
-      const sourceLines = stack.filter(line => /http:\/\/proxyharvest\.local\/(proxyharvest\.js|patches\/)/.test(line)).map(line => line.trim());
-      const source = sourceLines[0] || stack[0]?.trim() || 'unknown';
-      const key = `${kind}|${id}|${source}`;
-      const item = state.writes.get(key) || { kind, target: id, source, sourceStack: sourceLines.slice(0, 8), count: 0, samples: [] };
+      const direct = sourceLines();
+      const task = state.currentTask;
+      const source = direct[0] || task?.source || 'unknown';
+      const sourceStack = direct.length ? direct.slice(0, 8) : (task?.stack || []);
+      const taskLabel = task ? `${task.kind}:${task.delay}:${task.source}` : 'direct';
+      const key = `${kind}|${id}|${source}|${taskLabel}`;
+      const item = state.writes.get(key) || { kind, target: id, source, sourceStack, task: taskLabel, count: 0, samples: [] };
       item.count += 1;
       if (item.samples.length < 3) item.samples.push(String(value ?? '').slice(0, 180));
       state.writes.set(key, item);
@@ -109,6 +151,15 @@ dom.window.__PH_WRITER_HARNESS.enabled = false;
 
 const rows = [...dom.window.__PH_WRITER_HARNESS.writes.values()].sort((a, b) => b.count - a.count);
 const suspicious = rows.filter(r => r.count >= 3);
-console.log(JSON.stringify({ idleWindowMs: 3500, totalWrites: rows.reduce((n, r) => n + r.count, 0), suspiciousWrites: suspicious.slice(0, 40), allTopWrites: rows.slice(0, 60) }, null, 2));
+const timers = dom.window.__PH_WRITER_HARNESS.timers
+  .filter(t => /proxyharvest\.local/.test(t.source))
+  .map(t => ({ kind: t.kind, delay: t.delay, source: t.source, stack: t.stack }));
+console.log(JSON.stringify({
+  idleWindowMs: 3500,
+  totalWrites: rows.reduce((n, r) => n + r.count, 0),
+  suspiciousWrites: suspicious.slice(0, 40),
+  allTopWrites: rows.slice(0, 60),
+  timerCreators: timers.slice(0, 80)
+}, null, 2));
 console.log('TRACE mutation-writer-harness complete');
 dom.window.close();
