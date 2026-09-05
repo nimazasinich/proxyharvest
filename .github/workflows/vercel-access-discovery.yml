@@ -1,0 +1,87 @@
+name: Discover Vercel Access Scope
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/vercel-access-discovery.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    environment: Production
+    timeout-minutes: 10
+    env:
+      TARGET_PROJECT: proxyharvest
+    steps:
+      - name: Probe configured Vercel credentials safely
+        shell: bash
+        env:
+          TEAM_TOKEN: ${{ secrets.Team_VERCEL_TOKEN }}
+          PERSONAL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          labels=()
+          tokens=()
+          if [ -n "${TEAM_TOKEN:-}" ]; then labels+=("Team_VERCEL_TOKEN"); tokens+=("$TEAM_TOKEN"); fi
+          if [ -n "${PERSONAL_TOKEN:-}" ] && { [ -z "${TEAM_TOKEN:-}" ] || [ "$PERSONAL_TOKEN" != "$TEAM_TOKEN" ]; }; then
+            labels+=("VERCEL_TOKEN"); tokens+=("$PERSONAL_TOKEN")
+          fi
+          test "${#tokens[@]}" -gt 0 || { echo 'No Vercel credentials available.'; exit 2; }
+
+          any_found=0
+          for i in "${!tokens[@]}"; do
+            token="${tokens[$i]}"; label="${labels[$i]}"
+            echo "=== $label ==="
+
+            user_tmp="$(mktemp)"
+            user_code="$(curl -sS -o "$user_tmp" -w '%{http_code}' -H "Authorization: Bearer $token" https://api.vercel.com/v2/user)"
+            echo "user endpoint HTTP $user_code"
+
+            teams_tmp="$(mktemp)"
+            teams_code="$(curl -sS -o "$teams_tmp" -w '%{http_code}' -H "Authorization: Bearer $token" 'https://api.vercel.com/v2/teams?limit=100')"
+            team_ids=()
+            if [[ "$teams_code" == 2* ]]; then
+              mapfile -t team_ids < <(jq -r '.teams[]?.id // empty' "$teams_tmp")
+              echo "visible teams: ${#team_ids[@]}"
+            else
+              echo "teams endpoint HTTP $teams_code"
+            fi
+
+            projects_tmp="$(mktemp)"
+            projects_code="$(curl -sS -o "$projects_tmp" -w '%{http_code}' -H "Authorization: Bearer $token" 'https://api.vercel.com/v9/projects?limit=100')"
+            if [[ "$projects_code" == 2* ]]; then
+              project_count="$(jq -r '(.projects // []) | length' "$projects_tmp")"
+              echo "visible unscoped projects: $project_count"
+              project_id="$(jq -r --arg p "$TARGET_PROJECT" '.projects[]? | select(.name==$p) | .id' "$projects_tmp" | head -n1)"
+              if [ -n "$project_id" ]; then
+                echo "FOUND target project unscoped with $label"
+                any_found=1
+              fi
+            else
+              echo "unscoped projects endpoint HTTP $projects_code"
+            fi
+
+            for team_id in "${team_ids[@]}"; do
+              tmp="$(mktemp)"
+              code="$(curl -sS -o "$tmp" -w '%{http_code}' -H "Authorization: Bearer $token" "https://api.vercel.com/v9/projects?limit=100&teamId=$team_id")"
+              if [[ "$code" == 2* ]]; then
+                project_id="$(jq -r --arg p "$TARGET_PROJECT" '.projects[]? | select(.name==$p) | .id' "$tmp" | head -n1)"
+                if [ -n "$project_id" ]; then
+                  echo "FOUND target project in an accessible team with $label"
+                  echo "DISCOVERED_TEAM_ID=$team_id"
+                  any_found=1
+                fi
+              fi
+            done
+          done
+
+          if [ "$any_found" -eq 0 ]; then
+            echo 'RESULT: neither configured credential can discover proxyharvest in any accessible scope.'
+            exit 1
+          fi
+          echo 'RESULT: target project scope discovered.'
