@@ -1,4 +1,4 @@
-const DEFAULT_MODEL = 'Qwen/Qwen2.5-7B-Instruct-1M:fastest';
+const DEFAULT_MODEL = 'Qwen/Qwen2.5-7B-Instruct:fastest';
 const ROUTER = 'https://router.huggingface.co/v1/chat/completions';
 export default async function handler(req, res) {
   const model = process.env.HF_MODEL || DEFAULT_MODEL;
