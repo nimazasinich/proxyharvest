@@ -64,7 +64,9 @@ jobs:
           set -euo pipefail
           git config user.email "actions@github.com"
           git config user.name "proxyharvest-runtime-stability-bot"
-          git add patches/runtime-smart-v38.js patches/status-sync-v32.js patches/auto-pipeline-v27.js patches/compact-interaction-v34.js patches/configs-density-v35.js patches/configs-row-v36.js patches/status-guard-v32.js scripts/build.mjs package.json .github/workflows/v38-runtime.yml
+          # Do not stage workflow files here: GitHub App workflow tokens cannot push workflow-file changes.
+          # v38-runtime.yml compatibility markers are updated separately through the GitHub connector.
+          git add patches/runtime-smart-v38.js patches/status-sync-v32.js patches/auto-pipeline-v27.js patches/compact-interaction-v34.js patches/configs-density-v35.js patches/configs-row-v36.js patches/status-guard-v32.js scripts/build.mjs package.json
           if git diff --cached --quiet; then
             echo 'Runtime stability fix already applied.'
             exit 0
