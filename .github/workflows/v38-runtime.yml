@@ -43,11 +43,13 @@ jobs:
           node --check api/ai/health.js
           node --check api/ai/advise.js
           node --check worker/proxyharvest-gateway.js
-          grep -Fq "38.0.0-smart-runtime" patches/runtime-smart-v38.js
+          grep -Fq "38.1.0-smart-runtime" patches/runtime-smart-v38.js
+          grep -Fq "cfg-scoreThreshold']='70'" patches/runtime-smart-v38.js
           grep -Fq "BEST VERIFIED" patches/runtime-smart-v38.js
           grep -Fq "BEST REACHABLE" patches/runtime-smart-v38.js
+          grep -Fq "VERIFIED .TXT" patches/runtime-smart-v38.js
           grep -Fq "npm run bridge" patches/runtime-smart-v38.js
-          echo 'PASS V38-source'
+          echo 'PASS V38.1-source-defaults-exports'
 
       - name: Validate truthful real verifier
         shell: bash
@@ -93,10 +95,10 @@ jobs:
           test -f public/patches/runtime-smart-v38.js
           test -f public/patches/runtime-smart-v38.css
           grep -Fq 'data-proxyharvest-smart-runtime="v38"' public/index.html
-          grep -Fq '"smartRuntime": "38.0.0-smart-runtime"' public/build.json
+          grep -Fq '"smartRuntime": "38.1.0-smart-runtime"' public/build.json
           grep -Fq '"bridge": "38.0.0-local-real-test-bridge"' public/build.json
           grep -Fq '"aiProvider": "huggingface-inference-providers"' public/build.json
-          echo 'PASS V38-build'
+          echo 'PASS V38.1-build'
 
       - name: Summary
-        run: echo 'ProxyHarvest V38 PASS — smart defaults + local real verifier + Reality/WireGuard + HF Inference Providers + truthful best exports.'
+        run: echo 'ProxyHarvest V38.1 PASS — safe defaults + real local verifier + Reality/WireGuard + HF Inference Providers + verified-only exports.'
