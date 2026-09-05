@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
+  <title id="title">ProxyHarvest — Truthful Proxy Intelligence</title>
+  <desc id="desc">Animated architecture banner showing harvest, verify, score, rank and export stages.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#071426"/>
+      <stop offset="0.52" stop-color="#102451"/>
+      <stop offset="1" stop-color="#17133f"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#17d7ff"/>
+      <stop offset="0.52" stop-color="#6c63ff"/>
+      <stop offset="1" stop-color="#b14cff"/>
+    </linearGradient>
+    <linearGradient id="good" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#2ee59d"/>
+      <stop offset="1" stop-color="#13c7ff"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M 32 0 L 0 0 0 32" fill="none" stroke="#8db2ff" stroke-opacity="0.055" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="420" rx="28" fill="url(#bg)"/>
+  <rect width="1200" height="420" rx="28" fill="url(#grid)"/>
+  <circle cx="1060" cy="70" r="150" fill="#6c63ff" opacity="0.08">
+    <animate attributeName="r" values="140;165;140" dur="6s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="120" cy="360" r="140" fill="#13c7ff" opacity="0.055">
+    <animate attributeName="r" values="130;155;130" dur="7s" repeatCount="indefinite"/>
+  </circle>
+
+  <g transform="translate(64 58)">
+    <rect width="62" height="62" rx="18" fill="url(#accent)" filter="url(#glow)"/>
+    <path d="M17 18h28c8 0 13 4 13 11s-5 11-13 11H30v8H17V18zm13 10v4h14c2 0 3-1 3-2s-1-2-3-2H30z" fill="white"/>
+    <text x="82" y="28" fill="#ffffff" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="34" font-weight="800">ProxyHarvest</text>
+    <text x="82" y="55" fill="#9fb8dd" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="15" font-weight="600" letter-spacing="2">TRUTHFUL PROXY INTELLIGENCE • V38.1</text>
+  </g>
+
+  <text x="64" y="174" fill="#e8f1ff" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="20" font-weight="700">Harvest broadly. Verify honestly. Export only what evidence supports.</text>
+  <text x="64" y="205" fill="#8fa8cb" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="14">Worker reachability ≠ tunnel verification • Real Bridge evidence gates VERIFIED status</text>
+
+  <g transform="translate(64 258)" font-family="Inter,Segoe UI,Arial,sans-serif">
+    <path d="M98 31 H1005" stroke="#426da8" stroke-width="3" stroke-linecap="round" opacity="0.55"/>
+    <path d="M98 31 H1005" stroke="url(#accent)" stroke-width="2" stroke-linecap="round" stroke-dasharray="18 16" opacity="0.85">
+      <animate attributeName="stroke-dashoffset" values="0;-68" dur="2.6s" repeatCount="indefinite"/>
+    </path>
+
+    <g transform="translate(0 0)">
+      <rect width="145" height="64" rx="16" fill="#0e2446" stroke="#2f5a8e"/>
+      <circle cx="24" cy="22" r="7" fill="#13c7ff"><animate attributeName="opacity" values=".45;1;.45" dur="1.8s" repeatCount="indefinite"/></circle>
+      <text x="42" y="27" fill="#f4f8ff" font-size="14" font-weight="800">HARVEST</text>
+      <text x="18" y="49" fill="#89a4c9" font-size="11">sources + cache</text>
+    </g>
+    <g transform="translate(215 0)">
+      <rect width="145" height="64" rx="16" fill="#0e2446" stroke="#2f5a8e"/>
+      <circle cx="24" cy="22" r="7" fill="#49e8d0"><animate attributeName="opacity" values=".45;1;.45" dur="2.1s" repeatCount="indefinite"/></circle>
+      <text x="42" y="27" fill="#f4f8ff" font-size="14" font-weight="800">PROBE</text>
+      <text x="18" y="49" fill="#89a4c9" font-size="11">reachability</text>
+    </g>
+    <g transform="translate(430 0)">
+      <rect width="145" height="64" rx="16" fill="#102b3d" stroke="#2ee59d" stroke-opacity=".75"/>
+      <circle cx="24" cy="22" r="7" fill="#2ee59d" filter="url(#glow)"><animate attributeName="r" values="6;9;6" dur="2s" repeatCount="indefinite"/></circle>
+      <text x="42" y="27" fill="#f4f8ff" font-size="14" font-weight="800">VERIFY</text>
+      <text x="18" y="49" fill="#80d8bc" font-size="11">protocol / tunnel</text>
+    </g>
+    <g transform="translate(645 0)">
+      <rect width="145" height="64" rx="16" fill="#0e2446" stroke="#2f5a8e"/>
+      <circle cx="24" cy="22" r="7" fill="#8c7bff"><animate attributeName="opacity" values=".45;1;.45" dur="2.4s" repeatCount="indefinite"/></circle>
+      <text x="42" y="27" fill="#f4f8ff" font-size="14" font-weight="800">SCORE</text>
+      <text x="18" y="49" fill="#89a4c9" font-size="11">rank + evidence</text>
+    </g>
+    <g transform="translate(860 0)">
+      <rect width="145" height="64" rx="16" fill="#1c2047" stroke="#9d6bff"/>
+      <circle cx="24" cy="22" r="7" fill="#b14cff"><animate attributeName="opacity" values=".45;1;.45" dur="1.9s" repeatCount="indefinite"/></circle>
+      <text x="42" y="27" fill="#f4f8ff" font-size="14" font-weight="800">EXPORT</text>
+      <text x="18" y="49" fill="#a99bd0" font-size="11">best verified</text>
+    </g>
+
+    <circle cx="70" cy="31" r="4" fill="#ffffff" filter="url(#glow)">
+      <animateMotion dur="5.6s" repeatCount="indefinite" path="M0,0 H860"/>
+    </circle>
+  </g>
+
+  <g transform="translate(64 354)" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="12" font-weight="700">
+    <rect width="156" height="32" rx="16" fill="#0b3b31" stroke="#1c8a69"/><text x="18" y="21" fill="#57e7b2">✓ Real Bridge</text>
+    <rect x="168" width="174" height="32" rx="16" fill="#123047" stroke="#24658a"/><text x="186" y="21" fill="#64d6ff">↗ Worker Gateway</text>
+    <rect x="354" width="168" height="32" rx="16" fill="#302555" stroke="#735bba"/><text x="372" y="21" fill="#bda8ff">✦ Qwen Advisor</text>
+    <rect x="534" width="174" height="32" rx="16" fill="#163447" stroke="#2a6d83"/><text x="552" y="21" fill="#7edbed">◈ WireGuard</text>
+    <rect x="720" width="168" height="32" rx="16" fill="#2b234d" stroke="#6950ad"/><text x="738" y="21" fill="#c0a8ff">◆ SplitNet</text>
+  </g>
+</svg>
