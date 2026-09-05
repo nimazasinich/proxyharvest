@@ -1,0 +1,46 @@
+name: Consolidate branches into main
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/consolidate-main.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  delete-redundant-branches:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Verify branches are already consolidated and delete them
+        env:
+          EXPECTED_BASE: b2b03eeb0338272b46c34c8b0a8088421e530e36
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = "$EXPECTED_BASE"
+          branches=(
+            'integration/v26-ui-runtime'
+            'integration/v27-auto-pipeline'
+            'deploy/v25.1-fetchcomplete'
+            'cleanup/consolidate-main'
+          )
+          for b in "${branches[@]}"; do
+            sha="$(git ls-remote origin "refs/heads/$b" | awk '{print $1}')"
+            if [ -z "$sha" ]; then
+              echo "ALREADY ABSENT: $b"
+              continue
+            fi
+            if [ "$sha" != "$EXPECTED_BASE" ]; then
+              echo "REFUSING TO DELETE $b: $sha != $EXPECTED_BASE"
+              exit 1
+            fi
+            git push origin --delete "$b"
+            echo "DELETED: $b"
+          done
+          echo 'PASS: only main remains among the project branches.'
