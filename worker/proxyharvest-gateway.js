@@ -3,6 +3,8 @@ import { connect } from 'cloudflare:sockets';
 const VERSION = 'ProxyHarvest Worker Gateway v42';
 const MAX_JSON_BYTES = 8 * 1024 * 1024;
 const MAX_RAW_BYTES = 24 * 1024 * 1024;
+const DEFAULT_HF_MODEL = 'Qwen/Qwen2.5-7B-Instruct-1M:fastest';
+const HF_ROUTER = 'https://router.huggingface.co/v1/chat/completions';
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,HEAD,POST,OPTIONS',
@@ -137,15 +139,117 @@ async function probe(host, port, tlsHint) {
   return json(raw);
 }
 
-function health() {
+function redact(v) {
+  return String(v ?? '')
+    .replace(/hf_[A-Za-z0-9_-]+/g, '[HF_TOKEN_REDACTED]')
+    .replace(/[A-Za-z0-9+/=_-]{32,}/g, '[SECRET_REDACTED]')
+    .slice(0, 12000);
+}
+function chooseDeterministic(item) {
+  const candidates = Array.isArray(item?.candidates) ? item.candidates : [];
+  const safe = candidates
+    .filter(c => c && c.id && c.id !== 'keep-original')
+    .sort((a,b) => Number(b.rule_confidence || b.confidence || 0) - Number(a.rule_confidence || a.confidence || 0));
+  const selected = safe.slice(0,2).map(c => c.id);
+  return {
+    index:item?.index,
+    decision:selected.length ? 'apply_candidate_then_verify' : 'manual_review',
+    candidate_ids:selected,
+    confidence:selected.length ? Math.min(88, Math.max(45, Number(safe[0]?.rule_confidence || 55))) : 35,
+    reason:selected.length ? 'Bounded deterministic candidates selected; verification is still required.' : 'No bounded safe candidate was available.'
+  };
+}
+function safeModelItem(raw, item, fallback) {
+  const allowed = new Set((item?.candidates || []).map(c => c?.id).filter(Boolean));
+  const ids = (Array.isArray(raw?.candidate_ids) ? raw.candidate_ids : [])
+    .filter(id => allowed.has(id) && id !== 'keep-original')
+    .slice(0,2);
+  if (!ids.length) return fallback;
+  return {
+    index:item?.index,
+    decision:'apply_candidate_then_verify',
+    candidate_ids:ids,
+    confidence:Math.max(0, Math.min(95, Number(raw?.confidence || 65))),
+    reason:redact(raw?.reason || 'HF advisor selected bounded candidate IDs; verification is still required.')
+  };
+}
+function extractJson(text) {
+  const s = String(text || '').trim().replace(/^```(?:json)?\s*/i,'').replace(/```$/,'').trim();
+  try { return JSON.parse(s); } catch {}
+  const a=s.indexOf('{'), b=s.lastIndexOf('}');
+  if (a>=0 && b>a) { try { return JSON.parse(s.slice(a,b+1)); } catch {} }
+  return null;
+}
+async function hfCompletion({ token, model, messages, max_tokens=700, temperature=0.1 }) {
+  const r = await fetch(HF_ROUTER, {
+    method:'POST',
+    headers:{ Authorization:`Bearer ${token}`, 'Content-Type':'application/json' },
+    body:JSON.stringify({ model, messages, max_tokens, temperature, stream:false })
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.error?.message || data?.error || `HF HTTP ${r.status}`);
+  return data;
+}
+async function aiHealth(url, env) {
+  const model = env?.HF_MODEL || DEFAULT_HF_MODEL;
+  const token = env?.HF_TOKEN || '';
+  const deep = url.searchParams.get('deep') === '1';
+  if (!token) return json({ ok:true, configured:false, loaded:false, mode:'rules-only', model, endpoint:'/ai/advise', note:'HF_TOKEN Worker secret is not configured.' });
+  if (!deep) return json({ ok:true, configured:true, loaded:false, mode:'configured', model, endpoint:'/ai/advise', note:'HF token configured; use deep=1 for a real provider check.' });
+  const started=Date.now();
+  try {
+    const data=await hfCompletion({ token, model, messages:[{role:'user',content:'Reply with exactly OK.'}], max_tokens:4, temperature:0 });
+    const text=data?.choices?.[0]?.message?.content || '';
+    return json({ ok:true, configured:true, loaded:true, mode:'huggingface-provider', model, latency_ms:Date.now()-started, provider_response:Boolean(text), endpoint:'/ai/advise' });
+  } catch(e) {
+    return json({ ok:true, configured:true, loaded:false, mode:'provider-error', model, latency_ms:Date.now()-started, warning:String(e?.message || e) });
+  }
+}
+async function aiAdvise(request, env) {
+  if (request.method !== 'POST') return json({ ok:false, error:'method-not-allowed' }, 405);
+  const started=Date.now();
+  try {
+    const body=await request.json().catch(() => ({}));
+    const items=Array.isArray(body?.items) ? body.items.slice(0,50) : [];
+    const model=env?.HF_MODEL || DEFAULT_HF_MODEL;
+    const token=env?.HF_TOKEN || '';
+    const fallback=items.map(chooseDeterministic);
+    if (!token) return json({ ok:true, mode:'rules-only', configured:false, loaded:false, model, latency_ms:Date.now()-started, items:fallback });
+
+    const compact=items.map(it => ({
+      index:it.index,
+      issues:it.issues || [],
+      type:it.type || '',
+      security:it.security || '',
+      network:it.network || '',
+      score:it.score || 0,
+      candidates:(it.candidates || []).map(c => ({ id:c.id, summary:c.summary || c.label || '', rule_confidence:c.rule_confidence || c.confidence || 0 }))
+    }));
+    const prompt=`You are ProxyHarvest Repair Advisor. Choose only candidate IDs already provided. Never invent credentials, hosts, ports, keys, UUIDs, passwords, SNI, public keys, or verification. Return strict JSON: {"items":[{"index":number,"candidate_ids":["id"],"confidence":0-95,"reason":"short reason"}]}. Prefer the smallest reversible repair. A repair is never verification.\n\n${redact(JSON.stringify(compact))}`;
+    try {
+      const data=await hfCompletion({ token, model, messages:[{role:'user',content:prompt}] });
+      const parsed=extractJson(data?.choices?.[0]?.message?.content || '');
+      const byIndex=new Map((parsed?.items || []).map(x => [Number(x.index),x]));
+      const advised=items.map((item,i) => safeModelItem(byIndex.get(Number(item.index)),item,fallback[i]));
+      return json({ ok:true, mode:'huggingface-provider', configured:true, loaded:true, model, latency_ms:Date.now()-started, items:advised, model_used:true, verification:false });
+    } catch(e) {
+      return json({ ok:true, mode:'rules-fallback', configured:true, loaded:false, model, latency_ms:Date.now()-started, warning:String(e?.message || e), items:fallback, verification:false });
+    }
+  } catch(e) {
+    return json({ ok:false, error:String(e?.message || e) }, 500);
+  }
+}
+
+function health(env) {
   return json({
     ok:true,
     service:VERSION,
-    routes:['/health','/?url=','/fetch-sub','/source-check','/probe','/bridge/health'],
+    routes:['/health','/?url=','/fetch-sub','/source-check','/probe','/bridge/health','/ai/health','/ai/advise'],
     fetch:'streaming-cors-relay',
     jsonFetchLimitBytes:MAX_JSON_BYTES,
     rawFetchLimitBytes:MAX_RAW_BYTES,
     probe:'raw-tcp-tls',
+    ai:{ configured:Boolean(env?.HF_TOKEN), role:'repair-advisor-only', verifier:false },
     note:'Cloud Edge Relay provides source fetch and transport reachability only; never protocol/tunnel/WireGuard verification'
   });
 }
@@ -161,16 +265,18 @@ function edgeBridgeHealth() {
 }
 
 export default {
-  async fetch(request) {
+  async fetch(request, env) {
     if (request.method === 'OPTIONS') return new Response('', { status:204, headers:CORS });
     const url = new URL(request.url);
     try {
       if (url.pathname === '/' && url.searchParams.has('url')) return rawRelay(url.searchParams.get('url') || '', request);
-      if (url.pathname === '/' || url.pathname === '/health') return health();
+      if (url.pathname === '/' || url.pathname === '/health') return health(env);
       if (url.pathname === '/bridge/health') return edgeBridgeHealth();
       if (url.pathname === '/fetch-sub') return fetchSub(url.searchParams.get('url') || '', request);
       if (url.pathname === '/source-check') return sourceCheck(url.searchParams.get('url') || '');
       if (url.pathname === '/probe') return probe(url.searchParams.get('host') || '', url.searchParams.get('port') || '443', url.searchParams.get('tls') || '');
+      if (url.pathname === '/ai/health') return aiHealth(url, env);
+      if (url.pathname === '/ai/advise') return aiAdvise(request, env);
       return json({ ok:false, error:'unknown-route' }, 404);
     } catch (e) {
       return json({ ok:false, error:String(e?.message || e) }, 502);
