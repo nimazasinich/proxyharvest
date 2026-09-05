@@ -1,0 +1,70 @@
+name: Apply ProxyHarvest V42.0.1 Completion
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/apply_v42_completion.py'
+      - '.github/workflows/apply-v42-completion.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: proxyharvest-v42-completion
+  cancel-in-progress: false
+
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Apply deterministic V42.0.1 migration
+        run: python3 scripts/apply_v42_completion.py
+
+      - name: Validate source and build
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --ignore-scripts --no-audit --no-fund
+          npm run check
+          npm run build
+          grep -Fq "const BUILD='42.0.1-auto-control-center'" patches/control-center-v42.js
+          grep -Fq 'Qwen/Qwen3-4B-Instruct-2507:fastest' worker/proxyharvest-gateway.js
+          grep -Fq 'Qwen/Qwen3-4B-Instruct-2507:fastest' api/ai/health.js
+          grep -Fq 'Qwen/Qwen3-4B-Instruct-2507:fastest' api/ai/advise.js
+          ! grep -Fq 'Qwen/Qwen2.5-7B-Instruct:fastest' worker/proxyharvest-gateway.js
+          grep -Fq '"controlCenter": "42.0.1-auto-control-center"' public/build.json
+          git diff --check
+
+      - name: Run mutation harnesses before commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --ignore-scripts --no-audit --no-fund jsdom@26.1.0 fake-indexeddb@6.0.1
+          timeout 30s node scripts/mutation_writer_harness.mjs
+          timeout 30s node scripts/mutation_observer_harness.mjs
+
+      - name: Commit verified V42.0.1 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.email "actions@github.com"
+          git config user.name "proxyharvest-v42-completion-bot"
+          git add patches/control-center-v42.js worker/proxyharvest-gateway.js api/ai/health.js api/ai/advise.js README.md scripts/build.mjs scripts/runtime-stability-check.mjs package.json package-lock.json
+          if git diff --cached --quiet; then
+            echo 'V42.0.1 migration already applied.'
+            exit 0
+          fi
+          git commit -m "fix: complete V42.0.1 runtime and HF provider"
+          git pull --rebase origin main
+          git push origin HEAD:main
