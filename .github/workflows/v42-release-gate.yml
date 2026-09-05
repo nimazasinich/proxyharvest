@@ -1,4 +1,4 @@
-name: ProxyHarvest V42 Release Gate
+name: ProxyHarvest V42.0.1 Release Gate
 
 on:
   workflow_dispatch:
@@ -36,10 +36,10 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install dependencies
-        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
 
-      - name: Static V42 gates
+      - name: Static V42.0.1 gates
         shell: bash
         run: |
           set -euo pipefail
@@ -48,11 +48,13 @@ jobs:
           node --check patches/control-center-v42.js
           node --check worker/proxyharvest-gateway.js
           node --check bridge/proxyharvest-bridge.mjs
-          grep -Fq '42.0.0-github-main-auto-control-center' package.json
-          grep -Fq "controlCenter: '42.0.0-auto-control-center'" scripts/build.mjs
+          grep -Fq '42.0.1-github-main-auto-control-center' package.json
+          grep -Fq "controlCenter: '42.0.1-auto-control-center'" scripts/build.mjs
           grep -Fq "cloudEdgeRelay: '42.0.0-streaming-cors-relay'" scripts/build.mjs
+          grep -Fq "const BUILD='42.0.1-auto-control-center'" patches/control-center-v42.js
           grep -Fq 'AUTO_INTERVAL=15*60*1000' patches/control-center-v42.js
           grep -Fq 'ph-v42-source-migration-1' patches/control-center-v42.js
+          grep -Fq 'Qwen/Qwen3-4B-Instruct-2507:fastest' worker/proxyharvest-gateway.js
           grep -Fq 'protocolVerified:ok' bridge/proxyharvest-bridge.mjs
           grep -Fq 'tunnelVerified:ok' bridge/proxyharvest-bridge.mjs
           grep -Fq 'sing-box-tunnel' bridge/proxyharvest-bridge.mjs
@@ -60,7 +62,7 @@ jobs:
           cmp -s index.html proxyharvest.html
           git diff --check
 
-      - name: Build canonical V42 output
+      - name: Build canonical V42.0.1 output
         shell: bash
         run: |
           set -euo pipefail
@@ -69,9 +71,10 @@ jobs:
           test -s public/patches/control-center-v42.js
           test -s public/patches/control-center-v42.css
           grep -Fq 'data-proxyharvest-control-center="v42"' public/index.html
-          grep -Fq '"controlCenter": "42.0.0-auto-control-center"' public/build.json
+          grep -Fq '"controlCenter": "42.0.1-auto-control-center"' public/build.json
           grep -Fq '"cloudEdgeRelay": "42.0.0-streaming-cors-relay"' public/build.json
           grep -Fq '"bridge": "38.0.0-local-real-test-bridge"' public/build.json
+          test "$(jq -r '.gitCommit' public/build.json)" = "$GITHUB_SHA"
 
       - name: Instrumented mutation writer harness
         shell: bash
@@ -99,5 +102,5 @@ jobs:
           test -n "$CHROME" || { echo 'Chrome/Chromium not found on runner'; exit 1; }
           PH_CHROME_PATH="$CHROME" timeout 30s node scripts/browser_stability_smoke.mjs
 
-      - name: V42 release-gate summary
-        run: echo 'PASS ProxyHarvest V42 source + build + mutation harnesses + headless browser smoke.'
+      - name: V42.0.1 release-gate summary
+        run: echo 'PASS ProxyHarvest V42.0.1 exact source + canonical build + mutation harnesses + headless browser smoke.'
