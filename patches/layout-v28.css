@@ -89,7 +89,7 @@ body[data-premium-shell="1"] .ph-workspace{
 }
 body[data-premium-shell="1"] .ph-main-head{
   width:100%!important;height:auto!important;min-height:72px!important;margin:0 0 12px!important;
-  display:grid!important;grid-template-columns:minmax(165px,1fr) auto!important;
+  display:grid!important;grid-template-columns:minmax(165px,1fr) minmax(0,auto)!important;
   align-items:start!important;gap:10px!important;
 }
 body[data-premium-shell="1"] .ph-dashboard-titlewrap,
@@ -148,9 +148,14 @@ body[data-premium-shell="1"] #tab-wireguard>* ,
 body[data-premium-shell="1"] #tab-ai-healer>* ,
 body[data-premium-shell="1"] #tab-infrastructure>*{max-width:100%!important;min-width:0!important}
 
-/* Avoid fixed-width Config table causing page-level horizontal scroll; table owns its own scroller. */
 body[data-premium-shell="1"] #tab-configs .cfgs-table-wrap{width:100%!important;max-width:100%!important;overflow:auto!important}
 body[data-premium-shell="1"] #tab-configs .cfgs-hdr,body[data-premium-shell="1"] #tab-configs .cfgs-action-bar{width:100%!important;max-width:100%!important}
+
+@media (max-width:1560px){
+  body[data-premium-shell="1"] .ph-main-head{grid-template-columns:1fr!important}
+  body[data-premium-shell="1"] .ph-head-actions{justify-content:flex-start!important}
+  body[data-premium-shell="1"] .ph-main-head h1{font-size:27px!important}
+}
 
 @media (max-width:1450px){
   body[data-premium-shell="1"] .ph-app-shell{grid-template-columns:214px minmax(0,1fr)!important}
@@ -158,7 +163,6 @@ body[data-premium-shell="1"] #tab-configs .cfgs-hdr,body[data-premium-shell="1"]
   body[data-premium-shell="1"] .ph-premium-dashboard{grid-template-columns:214px minmax(0,1fr) 246px!important}
   body[data-premium-shell="1"] .ph-route-col{padding-left:15px!important;padding-right:15px!important}
   body[data-premium-shell="1"] .ph-workspace{padding-left:14px!important;padding-right:14px!important}
-  body[data-premium-shell="1"] .ph-main-head h1{font-size:25px!important}
   body[data-premium-shell="1"] .ph-command-slot .btn{padding-left:7px!important;padding-right:7px!important;font-size:8px!important}
   body[data-premium-shell="1"] .ph-select-btn{width:124px!important}
 }
@@ -166,8 +170,6 @@ body[data-premium-shell="1"] #tab-configs .cfgs-hdr,body[data-premium-shell="1"]
 @media (max-width:1240px){
   body[data-premium-shell="1"] .ph-premium-dashboard{grid-template-columns:205px minmax(0,1fr)!important}
   body[data-premium-shell="1"] .ph-activity{display:none!important}
-  body[data-premium-shell="1"] .ph-main-head{grid-template-columns:1fr!important}
-  body[data-premium-shell="1"] .ph-head-actions{justify-content:flex-start!important}
 }
 
 @media (max-width:980px){
