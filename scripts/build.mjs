@@ -63,6 +63,8 @@ const manifest = {
   aiProvider: 'huggingface-inference-providers',
   canonicalViewport: '1368x753',
   source: 'github-main',
+  gitCommit: process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || null,
+  gitRef: process.env.VERCEL_GIT_COMMIT_REF || process.env.GITHUB_REF_NAME || null,
   indexSha256: createHash('sha256').update(index).digest('hex'),
   runtimeSha256: createHash('sha256').update(runtime).digest('hex'),
   generatedAt: new Date().toISOString()
