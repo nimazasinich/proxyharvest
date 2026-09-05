@@ -48,7 +48,7 @@ jobs:
           node --check patches/control-center-v42.js
           node --check worker/proxyharvest-gateway.js
           node --check bridge/proxyharvest-bridge.mjs
-          grep -Fq '42.0.0-auto-control-center' package.json
+          grep -Fq '42.0.0-github-main-auto-control-center' package.json
           grep -Fq "controlCenter: '42.0.0-auto-control-center'" scripts/build.mjs
           grep -Fq "cloudEdgeRelay: '42.0.0-streaming-cors-relay'" scripts/build.mjs
           grep -Fq 'AUTO_INTERVAL=15*60*1000' patches/control-center-v42.js
