@@ -70,7 +70,7 @@ jobs:
           grep -Fq "vlessReality:true" bridge/proxyharvest-bridge.mjs
           grep -Fq "out.reality={enabled:true" bridge/proxyharvest-bridge.mjs
           grep -Fq "persistent_keepalive_interval" bridge/proxyharvest-bridge.mjs
-          grep -Fq "WireGuard verification uses sing-box" README.md
+          grep -Fq "WireGuard via sing-box WireGuard endpoint support" README.md
           echo 'PASS V38-real-verifier'
 
       - name: Validate HF Inference Providers path
