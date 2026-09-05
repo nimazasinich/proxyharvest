@@ -29,13 +29,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
       - name: Apply runtime stability patch
         run: node scripts/apply-runtime-stability-v39.mjs
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --ignore-scripts --no-audit --no-fund
 
       - name: Syntax and static stability gates
         run: |
