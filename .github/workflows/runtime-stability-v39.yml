@@ -7,7 +7,9 @@ on:
     paths:
       - 'scripts/apply-runtime-stability-v39.mjs'
       - 'scripts/apply_runtime_stability_v39.py'
+      - 'scripts/apply_mutation_loop_v40.py'
       - 'scripts/runtime-stability-check.mjs'
+      - 'scripts/mutation_observer_harness.mjs'
       - 'scripts/browser_stability_smoke.mjs'
       - '.github/workflows/runtime-stability-v39.yml'
 
@@ -21,7 +23,7 @@ concurrency:
 jobs:
   patch-and-verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -31,8 +33,10 @@ jobs:
         with:
           node-version: 22
 
-      - name: Apply runtime stability patch
-        run: node scripts/apply-runtime-stability-v39.mjs
+      - name: Apply runtime stability patches
+        run: |
+          node scripts/apply-runtime-stability-v39.mjs
+          python3 scripts/apply_mutation_loop_v40.py
 
       - name: Install dependencies
         run: npm install --ignore-scripts --no-audit --no-fund
@@ -41,9 +45,22 @@ jobs:
         run: |
           npm run check
           node scripts/runtime-stability-check.mjs
+          node --check patches/ui-v26.js
+          node --check patches/auto-pipeline-v27.js
+          node --check proxyharvest.js
+          grep -Fq "PH_MUTATION_STABILITY_V40 = '40.0.0'" proxyharvest.js
+          grep -Fq "PH_V26_MUTATION_STABILITY = '40.0.0'" patches/ui-v26.js
+          grep -Fq "PH_V27_MUTATION_STABILITY = '40.0.0'" patches/auto-pipeline-v27.js
 
       - name: Build canonical output
         run: npm run build
+
+      - name: Instrumented jsdom MutationObserver harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --ignore-scripts --no-audit --no-fund jsdom@26.1.0 fake-indexeddb@6.0.1
+          timeout 30s node scripts/mutation_observer_harness.mjs
 
       - name: Headless browser event-loop smoke
         shell: bash
@@ -65,11 +82,10 @@ jobs:
           git config user.email "actions@github.com"
           git config user.name "proxyharvest-runtime-stability-bot"
           # Do not stage workflow files here: GitHub App workflow tokens cannot push workflow-file changes.
-          # v38-runtime.yml compatibility markers are updated separately through the GitHub connector.
-          git add patches/runtime-smart-v38.js patches/status-sync-v32.js patches/auto-pipeline-v27.js patches/compact-interaction-v34.js patches/configs-density-v35.js patches/configs-row-v36.js patches/status-guard-v32.js scripts/build.mjs package.json
+          git add proxyharvest.js patches/ui-v26.js patches/runtime-smart-v38.js patches/status-sync-v32.js patches/auto-pipeline-v27.js patches/compact-interaction-v34.js patches/configs-density-v35.js patches/configs-row-v36.js patches/status-guard-v32.js scripts/build.mjs package.json
           if git diff --cached --quiet; then
             echo 'Runtime stability fix already applied.'
             exit 0
           fi
-          git commit -m "fix: eliminate runtime mutation loops and UI hangs"
+          git commit -m "fix: eliminate remaining MutationObserver feedback loops"
           git push origin HEAD:main
