@@ -41,18 +41,18 @@ jobs:
         shell: bash
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN || secrets.huggingfacetoken }}
         run: |
           set -euo pipefail
           missing=0
           if [ -z "${VERCEL_TOKEN:-}" ]; then echo 'VERCEL_TOKEN GitHub Actions secret is missing.'; missing=1; fi
-          if [ -z "${HF_TOKEN:-}" ]; then echo 'HF_TOKEN GitHub Actions secret is missing.'; missing=1; fi
+          if [ -z "${HF_TOKEN:-}" ]; then echo 'Hugging Face token GitHub Actions secret is missing.'; missing=1; fi
           if [ "$missing" -eq 0 ]; then
             echo 'ready=true' >> "$GITHUB_OUTPUT"
             echo 'Credentials are present; continuing with Vercel environment sync.'
           else
             echo 'ready=false' >> "$GITHUB_OUTPUT"
-            echo 'Environment sync is blocked until the missing repository Actions secret(s) are added.'
+            echo 'Environment sync is blocked until the missing GitHub Actions secret(s) are available.'
           fi
 
       - name: Link Vercel project
@@ -72,7 +72,7 @@ jobs:
         shell: bash
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN || secrets.huggingfacetoken }}
         run: |
           set -euo pipefail
           for target in production preview; do
@@ -125,4 +125,4 @@ jobs:
       - name: Blocker summary
         if: steps.creds.outputs.ready != 'true'
         run: |
-          echo 'SKIPPED: add VERCEL_TOKEN and HF_TOKEN as GitHub Actions repository secrets, then re-run this workflow.'
+          echo 'SKIPPED: expected VERCEL_TOKEN plus HF_TOKEN or configured alias huggingfacetoken.'
