@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - 'api/ai/**'
+      - 'scripts/build.mjs'
       - '.github/workflows/sync-vercel-hf.yml'
 
 permissions:
@@ -19,15 +20,25 @@ jobs:
   sync-vercel-hf:
     runs-on: ubuntu-latest
     environment: Production
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
       VERCEL_PROJECT: proxyharvest
       VERCEL_TEAM_SLUG: dreammakers-projects-6bd02e6d
+      VERCEL_TEAM_FALLBACK_ID: team_tgCTfev6a9dYgjXVMHGmvtKl
+      GITHUB_ORG: nimazasinich
+      GITHUB_REPO: proxyharvest
       DEFAULT_HF_MODEL: Qwen/Qwen2.5-7B-Instruct-1M:fastest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
-      - name: Validate AI provider source
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate source and compute expected deploy identity
+        id: expected
         shell: bash
         run: |
           set -euo pipefail
@@ -35,6 +46,17 @@ jobs:
           node --check api/ai/advise.js
           grep -Fq 'https://router.huggingface.co/v1/chat/completions' api/ai/health.js
           grep -Fq "mode:'huggingface-provider'" api/ai/health.js
+          npm install --ignore-scripts --no-audit --no-fund
+          npm run build
+          index_sha="$(jq -r '.indexSha256' public/build.json)"
+          runtime_sha="$(jq -r '.runtimeSha256' public/build.json)"
+          build_commit="$(jq -r '.gitCommit // empty' public/build.json)"
+          test -n "$index_sha"
+          test -n "$runtime_sha"
+          test "$build_commit" = "$GITHUB_SHA"
+          echo "index_sha=$index_sha" >> "$GITHUB_OUTPUT"
+          echo "runtime_sha=$runtime_sha" >> "$GITHUB_OUTPUT"
+          echo "PASS: expected build identity is $GITHUB_SHA."
 
       - name: Detect required secrets
         id: creds
@@ -45,25 +67,18 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN || secrets.huggingfacetoken }}
         run: |
           set -euo pipefail
-          missing=0
-          if [ -z "${VERCEL_TOKEN:-}" ]; then echo 'Team_VERCEL_TOKEN/VERCEL_TOKEN is missing.'; missing=1; fi
-          if [ -z "${VERCEL_TEAM_ID:-}" ]; then echo 'teamid is missing.'; missing=1; fi
-          if [ -z "${HF_TOKEN:-}" ]; then echo 'HF_TOKEN/huggingfacetoken is missing.'; missing=1; fi
-          if [ "$missing" -eq 0 ]; then
-            echo 'ready=true' >> "$GITHUB_OUTPUT"
-            echo 'PASS: Vercel team token, teamid, and Hugging Face token are present.'
-          else
-            echo 'ready=false' >> "$GITHUB_OUTPUT"
-            exit 2
-          fi
+          test -n "${VERCEL_TOKEN:-}" || { echo 'Team_VERCEL_TOKEN/VERCEL_TOKEN is missing.'; exit 2; }
+          test -n "${VERCEL_TEAM_ID:-}" || { echo 'teamid is missing.'; exit 2; }
+          test -n "${HF_TOKEN:-}" || { echo 'HF_TOKEN/huggingfacetoken is missing.'; exit 2; }
+          echo 'ready=true' >> "$GITHUB_OUTPUT"
+          echo 'PASS: Vercel token, team id, and Hugging Face token are present.'
 
       - name: Resolve Vercel project in team context
         id: project
-        if: steps.creds.outputs.ready == 'true'
         shell: bash
         env:
           VERCEL_TOKEN: ${{ secrets.Team_VERCEL_TOKEN || secrets.VERCEL_TOKEN }}
-          VERCEL_TEAM_ID: ${{ secrets.teamid || vars.teamid || 'team_tgCTfev6a9dYgjXVMHGmvtKl' }}
+          CONFIGURED_TEAM_ID: ${{ secrets.teamid || vars.teamid || 'team_tgCTfev6a9dYgjXVMHGmvtKl' }}
         run: |
           set -euo pipefail
 
@@ -75,20 +90,12 @@ jobs:
           echo "Vercel team lookup by slug HTTP $team_code"
           if [[ "$team_code" == 2* ]]; then
             resolved_team_id="$(jq -r '(.teams[0].id // .id // empty)' "$team_tmp")"
-            if [ -n "$resolved_team_id" ]; then
-              echo "Resolved slug $VERCEL_TEAM_SLUG to team id $resolved_team_id"
-            else
-              echo 'Team lookup succeeded but returned no team id.'
-              jq -c '{teams:(.teams // [])}' "$team_tmp" 2>/dev/null || true
-            fi
-          else
-            jq -c '{error:(.error // .)}' "$team_tmp" 2>/dev/null || cat "$team_tmp"
           fi
 
           project_id=''
           scope_qs=''
-          candidates=("teamId=$VERCEL_TEAM_ID")
-          if [ -n "$resolved_team_id" ] && [ "$resolved_team_id" != "$VERCEL_TEAM_ID" ]; then
+          candidates=("teamId=$CONFIGURED_TEAM_ID")
+          if [ -n "$resolved_team_id" ] && [ "$resolved_team_id" != "$CONFIGURED_TEAM_ID" ]; then
             candidates+=("teamId=$resolved_team_id")
           fi
           candidates+=("slug=$VERCEL_TEAM_SLUG" '')
@@ -115,16 +122,15 @@ jobs:
           done
 
           if [ -z "$project_id" ]; then
-            echo 'Vercel token is accepted, but proxyharvest is not visible through configured teamid, resolved slug team, slug, or unscoped context.'
+            echo 'Vercel token is accepted, but proxyharvest is not visible in the configured account/team contexts.'
             exit 1
           fi
 
           echo "project_id=$project_id" >> "$GITHUB_OUTPUT"
           echo "scope_qs=$scope_qs" >> "$GITHUB_OUTPUT"
-          echo "PASS: team-scoped token can access $VERCEL_PROJECT ($project_id) using ${scope_qs:-unscoped}."
+          echo "PASS: Vercel project resolved as $project_id using ${scope_qs:-unscoped}."
 
       - name: Upsert HF_TOKEN in Production and Preview
-        if: steps.project.outputs.project_id != ''
         shell: bash
         env:
           VERCEL_TOKEN: ${{ secrets.Team_VERCEL_TOKEN || secrets.VERCEL_TOKEN }}
@@ -143,10 +149,9 @@ jobs:
             --data "$payload" "$url")"
           echo "HF_TOKEN upsert HTTP $code"
           if [[ "$code" != 2* ]]; then cat "$tmp"; exit 1; fi
-          echo 'PASS: HF_TOKEN is configured for Production and Preview.'
+          echo 'PASS: HF_TOKEN configured for Production and Preview.'
 
       - name: Upsert default HF_MODEL
-        if: steps.project.outputs.project_id != ''
         shell: bash
         env:
           VERCEL_TOKEN: ${{ secrets.Team_VERCEL_TOKEN || secrets.VERCEL_TOKEN }}
@@ -164,41 +169,26 @@ jobs:
             --data "$payload" "$url")"
           echo "HF_MODEL upsert HTTP $code"
           if [[ "$code" != 2* ]]; then cat "$tmp"; exit 1; fi
-          echo 'PASS: HF_MODEL is configured.'
+          echo 'PASS: HF_MODEL configured.'
 
-      - name: Resolve latest Production deployment
-        id: previous
-        if: steps.project.outputs.project_id != ''
-        shell: bash
-        env:
-          VERCEL_TOKEN: ${{ secrets.Team_VERCEL_TOKEN || secrets.VERCEL_TOKEN }}
-          PROJECT_ID: ${{ steps.project.outputs.project_id }}
-          SCOPE_QS: ${{ steps.project.outputs.scope_qs }}
-        run: |
-          set -euo pipefail
-          url="https://api.vercel.com/v7/deployments?projectId=$PROJECT_ID&target=production&limit=1"
-          if [ -n "$SCOPE_QS" ]; then url="$url&$SCOPE_QS"; fi
-          tmp="$(mktemp)"
-          code="$(curl -sS -o "$tmp" -w '%{http_code}' -H "Authorization: Bearer $VERCEL_TOKEN" "$url")"
-          echo "Production deployment lookup HTTP $code"
-          if [[ "$code" != 2* ]]; then cat "$tmp"; exit 1; fi
-          deployment_id="$(jq -r '(.deployments[0].uid // .deployments[0].id // empty)' "$tmp")"
-          if [ -z "$deployment_id" ]; then cat "$tmp"; exit 1; fi
-          echo "deployment_id=$deployment_id" >> "$GITHUB_OUTPUT"
-          echo "PASS: resolved production deployment $deployment_id."
-
-      - name: Redeploy Production via REST
+      - name: Deploy exact GitHub main commit via Vercel REST
         id: deploy
-        if: steps.previous.outputs.deployment_id != ''
         shell: bash
         env:
           VERCEL_TOKEN: ${{ secrets.Team_VERCEL_TOKEN || secrets.VERCEL_TOKEN }}
           PROJECT_ID: ${{ steps.project.outputs.project_id }}
-          PREVIOUS_DEPLOYMENT_ID: ${{ steps.previous.outputs.deployment_id }}
           SCOPE_QS: ${{ steps.project.outputs.scope_qs }}
         run: |
           set -euo pipefail
-          payload="$(jq -cn --arg name "$VERCEL_PROJECT" --arg project "$PROJECT_ID" --arg deploymentId "$PREVIOUS_DEPLOYMENT_ID" '{name:$name,project:$project,deploymentId:$deploymentId,target:"production"}')"
+          payload="$(jq -cn \
+            --arg name "$VERCEL_PROJECT" \
+            --arg project "$PROJECT_ID" \
+            --arg org "$GITHUB_ORG" \
+            --arg repo "$GITHUB_REPO" \
+            --arg ref "main" \
+            --arg sha "$GITHUB_SHA" \
+            --arg remote "https://github.com/$GITHUB_ORG/$GITHUB_REPO" \
+            '{name:$name,project:$project,target:"production",withLatestCommit:true,gitSource:{type:"github",org:$org,repo:$repo,ref:$ref,sha:$sha},gitMetadata:{remoteUrl:$remote,commitRef:$ref,commitSha:$sha,dirty:false,ci:true,ciType:"github-actions"}}')"
           url='https://api.vercel.com/v13/deployments?forceNew=1'
           if [ -n "$SCOPE_QS" ]; then url="$url&$SCOPE_QS"; fi
           tmp="$(mktemp)"
@@ -206,17 +196,17 @@ jobs:
             -H "Authorization: Bearer $VERCEL_TOKEN" \
             -H 'Content-Type: application/json' \
             --data "$payload" "$url")"
-          echo "Production redeploy HTTP $code"
+          echo "Production Git deployment HTTP $code"
           if [[ "$code" != 2* ]]; then cat "$tmp"; exit 1; fi
           deployment_id="$(jq -r '(.id // .uid // empty)' "$tmp")"
           deployment_url="$(jq -r '(.url // empty)' "$tmp")"
-          if [ -z "$deployment_id" ] || [ -z "$deployment_url" ]; then cat "$tmp"; exit 1; fi
+          test -n "$deployment_id" || { cat "$tmp"; exit 1; }
+          test -n "$deployment_url" || { cat "$tmp"; exit 1; }
           echo "deployment_id=$deployment_id" >> "$GITHUB_OUTPUT"
           echo "deployment_url=$deployment_url" >> "$GITHUB_OUTPUT"
-          echo "Production deployment created: https://$deployment_url"
+          echo "PASS: deployment created for GitHub SHA $GITHUB_SHA at https://$deployment_url"
 
       - name: Wait for Production deployment
-        if: steps.deploy.outputs.deployment_id != ''
         shell: bash
         env:
           VERCEL_TOKEN: ${{ secrets.Team_VERCEL_TOKEN || secrets.VERCEL_TOKEN }}
@@ -224,7 +214,7 @@ jobs:
           SCOPE_QS: ${{ steps.project.outputs.scope_qs }}
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 40); do
+          for attempt in $(seq 1 50); do
             url="https://api.vercel.com/v13/deployments/$DEPLOYMENT_ID"
             if [ -n "$SCOPE_QS" ]; then url="$url?$SCOPE_QS"; fi
             tmp="$(mktemp)"
@@ -239,8 +229,25 @@ jobs:
           echo 'Deployment did not reach READY before timeout.'
           exit 1
 
+      - name: Verify deployed build identity
+        shell: bash
+        env:
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment_url }}
+          EXPECTED_INDEX_SHA: ${{ steps.expected.outputs.index_sha }}
+          EXPECTED_RUNTIME_SHA: ${{ steps.expected.outputs.runtime_sha }}
+        run: |
+          set -euo pipefail
+          body="$(curl -fsS --max-time 30 "https://$DEPLOYMENT_URL/build.json")"
+          echo "$body" | jq '{build,smartRuntime,gitCommit,gitRef,indexSha256,runtimeSha256}'
+          deployed_commit="$(printf '%s' "$body" | jq -r '.gitCommit // empty')"
+          deployed_index="$(printf '%s' "$body" | jq -r '.indexSha256 // empty')"
+          deployed_runtime="$(printf '%s' "$body" | jq -r '.runtimeSha256 // empty')"
+          test "$deployed_commit" = "$GITHUB_SHA"
+          test "$deployed_index" = "$EXPECTED_INDEX_SHA"
+          test "$deployed_runtime" = "$EXPECTED_RUNTIME_SHA"
+          echo 'PASS: deployed build.json matches the exact GitHub commit and source hashes.'
+
       - name: Verify deep AI health
-        if: steps.deploy.outputs.deployment_url != ''
         shell: bash
         env:
           DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment_url }}
@@ -250,4 +257,4 @@ jobs:
           echo "$body"
           printf '%s' "$body" | grep -Fq '"mode":"huggingface-provider"'
           printf '%s' "$body" | grep -Fq '"loaded":true'
-          echo 'PASS: Hugging Face provider is live on Production.'
+          echo 'PASS: Hugging Face provider is live on the exact Production build.'
