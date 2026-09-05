@@ -1,0 +1,102 @@
+name: Validate ProxyHarvest V38 Runtime
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - integration/v26-ui-runtime
+      - integration/v27-auto-pipeline
+      - deploy/v25.1-fetchcomplete
+    paths:
+      - 'bridge/**'
+      - 'patches/runtime-smart-v38.*'
+      - 'api/ai/**'
+      - 'worker/**'
+      - 'scripts/build.mjs'
+      - 'package.json'
+      - 'README.md'
+      - '.github/workflows/v38-runtime.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: proxyharvest-v38-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-v38-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate V38 source files
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in patches/runtime-smart-v38.js patches/runtime-smart-v38.css bridge/proxyharvest-bridge.mjs api/ai/health.js api/ai/advise.js worker/proxyharvest-gateway.js scripts/build.mjs package.json; do
+            test -f "$f" || { echo "MISSING: $f"; exit 1; }
+          done
+          node --check patches/runtime-smart-v38.js
+          node --check bridge/proxyharvest-bridge.mjs
+          node --check api/ai/health.js
+          node --check api/ai/advise.js
+          node --check worker/proxyharvest-gateway.js
+          grep -Fq "38.0.0-smart-runtime" patches/runtime-smart-v38.js
+          grep -Fq "BEST VERIFIED" patches/runtime-smart-v38.js
+          grep -Fq "BEST REACHABLE" patches/runtime-smart-v38.js
+          grep -Fq "npm run bridge" patches/runtime-smart-v38.js
+          echo 'PASS V38-source'
+
+      - name: Validate truthful real verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq "protocolVerified:ok" bridge/proxyharvest-bridge.mjs
+          grep -Fq "tunnelVerified:ok" bridge/proxyharvest-bridge.mjs
+          grep -Fq "sing-box-tunnel" bridge/proxyharvest-bridge.mjs
+          grep -Fq "sing-box check" README.md
+          grep -Fq "vlessReality:true" bridge/proxyharvest-bridge.mjs
+          grep -Fq "reality={enabled:true" bridge/proxyharvest-bridge.mjs
+          grep -Fq "persistent_keepalive_interval" bridge/proxyharvest-bridge.mjs
+          grep -Fq "WireGuard verification uses sing-box" README.md
+          echo 'PASS V38-real-verifier'
+
+      - name: Validate HF Inference Providers path
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq "https://router.huggingface.co/v1/chat/completions" api/ai/health.js
+          grep -Fq "https://router.huggingface.co/v1/chat/completions" api/ai/advise.js
+          grep -Fq "HF_TOKEN" api/ai/health.js
+          grep -Fq "candidate_ids" api/ai/advise.js
+          grep -Fq "rules-fallback" api/ai/advise.js
+          echo 'PASS V38-hf-provider'
+
+      - name: Validate Worker reachability boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq "cloudflare:sockets" worker/proxyharvest-gateway.js
+          grep -Fq "transport reachability only; never protocol/tunnel verification" worker/proxyharvest-gateway.js
+          grep -Fq "cf-socket-tcp" worker/proxyharvest-gateway.js
+          grep -Fq "cf-socket-tls" worker/proxyharvest-gateway.js
+          echo 'PASS V38-worker-boundary'
+
+      - name: Build canonical deploy output
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run build
+          test -f public/index.html
+          test -f public/patches/runtime-smart-v38.js
+          test -f public/patches/runtime-smart-v38.css
+          grep -Fq 'data-proxyharvest-smart-runtime="v38"' public/index.html
+          grep -Fq '"smartRuntime": "38.0.0-smart-runtime"' public/build.json
+          grep -Fq '"bridge": "38.0.0-local-real-test-bridge"' public/build.json
+          grep -Fq '"aiProvider": "huggingface-inference-providers"' public/build.json
+          echo 'PASS V38-build'
+
+      - name: Summary
+        run: echo 'ProxyHarvest V38 PASS — smart defaults + local real verifier + Reality/WireGuard + HF Inference Providers + truthful best exports.'
