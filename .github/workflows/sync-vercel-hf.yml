@@ -27,7 +27,7 @@ jobs:
       VERCEL_TEAM_FALLBACK_ID: team_tgCTfev6a9dYgjXVMHGmvtKl
       GITHUB_ORG: nimazasinich
       GITHUB_REPO: proxyharvest
-      DEFAULT_HF_MODEL: Qwen/Qwen2.5-7B-Instruct-1M:fastest
+      DEFAULT_HF_MODEL: Qwen/Qwen2.5-7B-Instruct:fastest
     steps:
       - uses: actions/checkout@v4
         with:
