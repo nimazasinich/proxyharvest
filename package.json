@@ -1,6 +1,6 @@
 {
   "name": "proxyharvest",
-  "version": "38.0.0-github-main-smart-runtime",
+  "version": "38.1.0-github-main-smart-runtime",
   "private": true,
   "type": "module",
   "engines": {"node": ">=22"},
